@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const MONGODB_URI = `mongodb://${process.env.MONGODB_HOST}/${process.env.MONGODB_DATABASE}`;
+const MONGODB_URI = `mongodb://${process.env.MONGODB_HOST || 'localhost'}/${process.env.MONGODB_DATABASE || 'waifu_list_bot_test'}`;
 
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,

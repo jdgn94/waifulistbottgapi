@@ -1,0 +1,60 @@
+<div id="new-waifu">
+  <v-row>
+    <v-col cols="6">
+      <v-card class="mx-auto my-12" elevation="2">
+        <v-card-title>
+          Add waifu
+        </v-card-title>
+        <form action="/add-waifu" method="POST" enctype="multipart/form-data">
+          <v-card-text>
+            <v-text-field
+              label="Name"
+              name="name"
+              required
+            ></v-text-field>
+            
+            <v-text-field
+              label="Nickname"
+              name="nickname"
+            ></v-text-field>
+
+            <v-autocomplete
+              v-model="searchFranchiseName"
+              :items="franchises"
+              :loading="isLoading"
+              :search-input.sync="search"
+              label="Franchise"
+              item-text="name"
+              item-value="_id"
+              name="franchise"
+            ></v-autocomplete>
+
+            <v-file-input
+              accept="image/*"
+              label="image"
+              name="image"
+            ></v-file-input>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn block color="primary" type="submit">Save</v-btn>
+          </v-card-actions>
+        </form>
+      </v-card>
+    </v-col>
+
+    <v-col cols="6">
+      <v-card class="mx-auto my-12" elevation="2">
+        <v-card-title>
+          Search waifu
+        </v-card-title>
+        <v-card-text>
+          <v-text-field
+            label="Name or nickname"
+            v-model="searcjWaifuName"
+          ></v-text-field>
+            <v-btn block color="primary" type="submit">search</v-btn>
+        </v-card-text>
+      </v-card>
+    </v-col>
+  </v-row>
+</div>
