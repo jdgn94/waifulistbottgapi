@@ -4,3 +4,4 @@ node_modules
 yarn.lock
 
 src/public
+src/config/config.js

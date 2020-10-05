@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class waifu extends Model {
+  class waifu_favorite_list extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -13,18 +13,12 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
     }
   };
-  waifu.init({
-    name: DataTypes.STRING,
-    nickname: DataTypes.STRING,
-    age: DataTypes.INTEGER,
-    servant: DataTypes.BOOLEAN,
-    waifu_type_id: DataTypes.INTEGER,
-    franchise_id: DataTypes.INTEGER,
-    public_id: DataTypes.STRING,
-    image_url: DataTypes.STRING
+  waifu_favorite_list.init({
+    waifu_list_id: DataTypes.INTEGER,
+    position: DataTypes.INTEGER
   }, {
     sequelize,
-    modelName: 'waifu',
+    modelName: 'waifu_favorite_list',
   });
-  return waifu;
+  return waifu_favorite_list;
 };

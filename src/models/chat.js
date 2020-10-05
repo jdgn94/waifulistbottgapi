@@ -1,18 +1,25 @@
-const mongoose = require('mongoose');
-
-const Schema = mongoose.Schema
-
-const chatSchema = Schema({
-  chatId: { type: String, require: true, unique: true },
-  limitMessage: { type: Number, require: true, default: 100 },
-  countMessage: { type: Number, require: true, default: 0 }
-},
-{
-  timestamps:
-  {
-    createdAt: 'createdAt',
-    updatedAt: 'updatedAt'
-  }
-});
-
-module.exports = mongoose.model('Chat', chatSchema);
+'use strict';
+const {
+  Model
+} = require('sequelize');
+module.exports = (sequelize, DataTypes) => {
+  class chat extends Model {
+    /**
+     * Helper method for defining associations.
+     * This method is not a part of Sequelize lifecycle.
+     * The `models/index` file will call this method automatically.
+     */
+    static associate(models) {
+      // define association here
+    }
+  };
+  chat.init({
+    chat_id_tg: DataTypes.STRING,
+    message_limit: DataTypes.INTEGER,
+    message_quantity: DataTypes.INTEGER
+  }, {
+    sequelize,
+    modelName: 'chat',
+  });
+  return chat;
+};

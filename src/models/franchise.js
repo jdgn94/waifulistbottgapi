@@ -1,17 +1,24 @@
-const mongoose = require('mongoose');
-
-const Schema = mongoose.Schema
-
-const franchiseSchema = Schema({
-  name: { type: String, require: true, unique: true },
-  nickname: { type: String },
-},
-{
-  timestamps:
-  {
-    createdAt: 'createdAt',
-    updatedAt: 'updatedAt'
-  }
-});
-
-module.exports = mongoose.model('Franchise', franchiseSchema);
+'use strict';
+const {
+  Model
+} = require('sequelize');
+module.exports = (sequelize, DataTypes) => {
+  class franchise extends Model {
+    /**
+     * Helper method for defining associations.
+     * This method is not a part of Sequelize lifecycle.
+     * The `models/index` file will call this method automatically.
+     */
+    static associate(models) {
+      // define association here
+    }
+  };
+  franchise.init({
+    name: DataTypes.STRING,
+    nickname: DataTypes.STRING
+  }, {
+    sequelize,
+    modelName: 'franchise',
+  });
+  return franchise;
+};

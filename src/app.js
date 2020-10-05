@@ -3,30 +3,16 @@ const morgan = require('morgan');
 const multer = require('multer');
 const path = require('path');
 const uuid = require('uuid')
-const exphbs = require('express-handlebars');
 
-const router = require('./routes');
-
+const baseURL = '/api';
+const waifus = require('./routes/waifus');
 
 
 // initialization
 const app = express();
-require('./database');
 
 // settings
 app.set('port', process.env.PORT || 3000);
-app.set('views', path.join(__dirname, 'views'));
-app.engine('.hbs', exphbs({
-  defaultLayout: 'main',
-  layoutsDir: path.join(app.get('views'), 'layouts'),
-  partialsDir: path.join(app.get('views'), 'partials'),
-  extname: '.hbs',
-  runtimeOptions: {
-    allowProtoPropertiesByDefault: true,
-    allowProtoMethodsByDefault: true,
-  },
-}));
-app.set('view engine', '.hbs');
 
 // middelwares
 app.use(morgan('dev'));
@@ -42,6 +28,6 @@ const storage = multer.diskStorage({
 app.use(multer({ storage }).single('image'))
 
 // routes
-app.use(router);
+app.use(baseURL + '/waifus', waifus);
 
 module.exports = app;
