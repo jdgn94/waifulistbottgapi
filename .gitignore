@@ -7,4 +7,3 @@ yarn-error.lock
 package-log.json
 
 src/public
-src/config/config.js
