@@ -6,7 +6,7 @@ const uuid = require('uuid')
 
 const baseURL = '/api';
 const waifus = require('./routes/waifus');
-
+const franchises = require('./routes/franchise');
 
 // initialization
 const app = express();
@@ -29,5 +29,6 @@ app.use(multer({ storage }).single('image'))
 
 // routes
 app.use(baseURL + '/waifus', waifus);
+app.use(baseURL + '/franchises', franchises);
 
 module.exports = app;
