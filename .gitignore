@@ -1,9 +1,9 @@
+.vscode
 node_modules
-.env
-
-yarn.lock
-yarn-error.lock
+src/public
 
 package-log.json
+yarn.lock
+yarn-error.lock
+.env
 
-src/public
