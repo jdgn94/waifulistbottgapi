@@ -5,6 +5,7 @@ const cloudinary = require('cloudinary');
 const express = require('express');
 
 const router = express.Router();
+const sequelize = db.sequelize;
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -12,25 +13,65 @@ cloudinary.config({
 })
 
 router.get('/', async (req, res) => {
-  const waifus = await db.sequelize.query(`
-    SELECT
-      *
-    FROM
-      view_waifus
-  `,
-  { type: db.sequelize.QueryTypes.SELECT });
-  res.status(200).send(waifus);
-})
+  let { name, page } = req.params;
+  if (!name) name = ''
+  if (!page) page = 1;
+  try {
+    const waifus = await sequelize.query(`
+      SELECT
+        w.id,
+        w.name,
+        w.nickname,
+        w.age,
+        w.servant,
+        w.image_url,
+        wt.name AS waifu_type_name,
+        f.name AS franchise_name,
+        f.nickname AS franchise_nickname
+      FROM
+        waifus AS w
+        INNER JOIN waifu_types AS wt ON wt.id = w.waifu_type_id 
+        INNER JOIN franchises AS f ON f.id = w.franchise_id 
+      WHERE
+        LOWER(w.name) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(w.nickname) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(w.age) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(wt.name) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%'
+      LIMIT 20 OFFSET ${(page - 1) * 20}
+    `,
+    { type: sequelize.QueryTypes.SELECT });
+    console.log(waifus)
+    
+    const totalItems = await sequelize.query(`
+      SELECT COUNT(*) AS total_items
+      FROM 
+        waifus AS w
+        INNER JOIN waifu_types AS wt ON wt.id = w.waifu_type_id 
+        INNER JOIN franchises AS f ON f.id = w.franchise_id 
+      WHERE
+        LOWER(w.name) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(w.nickname) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(w.age) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(wt.name) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%'
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    const totalPages = Math.ceil(totalItems[0].total_items / 20);
+    return res.status(200).json({ waifus, totalPages });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send(error)
+  }
+});
 
 router.post('/create', async (req, res) => {
   console.log("Estoy creando");
   const { name, nickname, age, waifu_type_id, servant, franchise_id } = req.body;
 
-  const result = await cloudinary.v2.uploader.upload(
-    req.file.path,
-    { folder: "Waifu List Bot Telegram" }
-  );
-
+  const result = uploadPhoto(req.file.path);
   const waifu = await Waifu.create({
     name,
     nickname,
@@ -42,8 +83,79 @@ router.post('/create', async (req, res) => {
     image_url: result.secure_url
   });
   console.log(waifu);
-  await fs.unlink(req.file.path);
   return res.status(200).send('creando')
-})
+});
+
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const waifu = await sequelize.query(`
+      SELECT
+        w.id,
+        w.name,
+        w.nickname,
+        w.age,
+        w.image_url,
+        wt.id AS waifu_type_id,
+        wt.name AS waifu_type_name,
+        f.id AS franchise_id,
+        f.name AS franchise_name,
+        f.nickname AS franchise_nickname
+      FROM
+        waifus AS w
+        INNER JOIN waifu_types AS wt ON wt.id = w.waifu_type_id 
+        INNER JOIN franchises AS f ON f.id = w.franchise_id 
+      WHERE
+        w.id = ${id}
+    `,{ type: sequelize.QueryTypes.SELECT });
+    
+    return res.status(200).send(waifu[0]);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send(error);
+  }
+});
+
+router.patch('/id', async (req, res) => {
+  const { id } = req.params;
+  const { name, nickname, age, waifu_type_id, franchise_id } = req.body;
+  try {
+    const public_id = await sequelize.query(`
+      SELECT public_id
+      FROM waifus
+      WHERE id = ${id}
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    await cloudinary.v2.uploader.destroy(public_id[0]);
+
+    const result = await uploadPhoto(req.file.path);
+    await sequelize.query(`
+      UPDATE waifus
+      SET
+        name = ${name},
+        nickname = ${nickname},
+        age = ${age},
+        public_id = ${result.public_id},
+        image_url = ${result.secure_url}
+        waifu_type_id = ${waifu_type_id},
+        franchise_id = ${franchise_id}
+      WHERE id = ${id}
+    `, { type: sequelize.QueryTypes.UPDATE });
+    return res.status(200).send('update');
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send(error);
+  }
+});
+
+async function uploadPhoto(path) {
+  const result = await cloudinary.v2.uploader.upload(
+    path,
+    { folder: "Waifu List Bot Telegram" }
+  );
+
+  await fs.unlink(req.file.path);
+  return result;
+}
 
 module.exports = router;

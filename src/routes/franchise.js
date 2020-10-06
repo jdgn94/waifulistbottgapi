@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.get('/search', async (req, res) => {
   let { name, page } = req.query;
+  if (!name) name = '';
   if (!page) page = 1;
   try {
     const franchises = await sequelize.query(`
@@ -16,7 +17,8 @@ router.get('/search', async (req, res) => {
       FROM
         franchises
       WHERE
-        LOWER(name) LIKE '%${name.toLowerCase()}%'
+        LOWER(name) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(nickname) LIKE '%${name.toLowerCase()}%'
       LIMIT 20 OFFSET ${(page - 1) * 20}
     `, { type: sequelize.QueryTypes.SELECT });
 
@@ -58,7 +60,7 @@ router.patch('/:id', async (req, res) => {
       UPDATE franchises
       SET name = '${name}', nickname = '${nickname}'
       WHERE id = ${id}
-    `);
+    `, { type: sequelize.QueryTypes.UPDATE });
     return res.status(200).send('updated');
   } catch (error) {
     return res.status(200).send(error);
