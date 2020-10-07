@@ -14,7 +14,8 @@ router.get('/', async (req, res) => {
     const franchises = await sequelize.query(`
       SELECT
         id,
-        name
+        name,
+        nickname
       FROM
         franchises f
       WHERE
@@ -23,7 +24,18 @@ router.get('/', async (req, res) => {
       LIMIT 20 OFFSET ${(page - 1) * 20}
     `, { type: sequelize.QueryTypes.SELECT });
 
-    return res.status(200).send(franchises);
+    const totalItems = await sequelize.query(`
+      SELECT
+        COUNT(*) total_items
+      FROM
+        franchises f
+      WHERE
+        LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%'
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    const totalPages = Math.ceil(totalItems[0].total_items / 20);
+    return res.status(200).send({franchises, totalPages});
   } catch (error) {
     return res.status(200).send(error);
   }
@@ -53,7 +65,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.patch('/:id', async (req, res) => {
+router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { name, nickname } = req.body;
   try {
