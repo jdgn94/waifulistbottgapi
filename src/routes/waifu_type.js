@@ -19,7 +19,18 @@ router.get('/', async (req, res) => {
         LOWER(name) LIKE '%${name.toLowerCase()}%'
       LIMIT 20 OFFSET ${(page - 1) * 20}
     `, { type: db.sequelize.QueryTypes.SELECT });
-    return res.status(200).send(types);
+
+    const totalItems = await sequelize.query(`
+      SELECT
+        COUNT(*) total_items
+      FROM
+        waifu_types
+      WHERE
+        LOWER(name) LIKE '%${name.toLowerCase()}%'
+    `, { type: db.sequelize.QueryTypes.SELECT });
+
+    const totalPages = Math.ceil(totalItems[0].total_items / 20);
+    return res.status(200).send({ types, totalPages });
   } catch (error) {
     console.error(error)
     return res.status(500).send(error)
@@ -48,7 +59,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.patch('/:id', async (req, res) => {
+router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
   try {
