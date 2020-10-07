@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const morgan = require('morgan');
 const multer = require('multer');
 const path = require('path');
@@ -17,6 +18,7 @@ app.set('port', process.env.PORT || 3000);
 
 // middelwares
 app.use(morgan('dev'));
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 const storage = multer.diskStorage({

@@ -13,7 +13,7 @@ cloudinary.config({
 })
 
 router.get('/', async (req, res) => {
-  let { name, page } = req.params;
+  let { name, page } = req.query;
   if (!name) name = ''
   if (!page) page = 1;
   try {
@@ -42,7 +42,6 @@ router.get('/', async (req, res) => {
       LIMIT 20 OFFSET ${(page - 1) * 20}
     `,
     { type: sequelize.QueryTypes.SELECT });
-    console.log(waifus)
     
     const totalItems = await sequelize.query(`
       SELECT COUNT(*) AS total_items
@@ -70,8 +69,10 @@ router.get('/', async (req, res) => {
 router.post('/create', async (req, res) => {
   console.log("Estoy creando");
   const { name, nickname, age, waifu_type_id, servant, franchise_id } = req.body;
+  console.log(req.body);
+  console.log(req.file);
 
-  const result = uploadPhoto(req.file.path);
+  const result = await uploadPhoto(req.file.path);
   const waifu = await Waifu.create({
     name,
     nickname,
@@ -95,6 +96,7 @@ router.get('/:id', async (req, res) => {
         w.name,
         w.nickname,
         w.age,
+        w.servant,
         w.image_url,
         wt.id AS waifu_type_id,
         wt.name AS waifu_type_name,
@@ -116,27 +118,29 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.patch('/id', async (req, res) => {
+router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { name, nickname, age, waifu_type_id, franchise_id } = req.body;
   try {
-    const public_id = await sequelize.query(`
-      SELECT public_id
-      FROM waifus
-      WHERE id = ${id}
-    `, { type: sequelize.QueryTypes.SELECT });
+    const waifu = await Waifu.findOne({ where: { id } });
+    let result;
 
-    await cloudinary.v2.uploader.destroy(public_id[0]);
+    if (req.file) {
+      await cloudinary.v2.uploader.destroy(waifu.public_id);
+  
+      result = await uploadPhoto(req.file.path);
+    } else {
+      result = { public_id: waifu.public_id, secure_url: waifu.image_url };
+    }
 
-    const result = await uploadPhoto(req.file.path);
     await sequelize.query(`
       UPDATE waifus
       SET
-        name = ${name},
-        nickname = ${nickname},
+        name = '${name}',
+        nickname = '${nickname}',
         age = ${age},
-        public_id = ${result.public_id},
-        image_url = ${result.secure_url}
+        public_id = '${result.public_id}',
+        image_url = '${result.secure_url}',
         waifu_type_id = ${waifu_type_id},
         franchise_id = ${franchise_id}
       WHERE id = ${id}
@@ -154,7 +158,7 @@ async function uploadPhoto(path) {
     { folder: "Waifu List Bot Telegram" }
   );
 
-  await fs.unlink(req.file.path);
+  await fs.unlink(path);
   return result;
 }
 

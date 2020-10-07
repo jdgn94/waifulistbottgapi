@@ -5,7 +5,7 @@ const router = express.Router();
 const sequelize = db.sequelize;
 
 router.get('/', async (req, res) => {
-  let { name, page } = req.params;
+  let { name, page } = req.query;
   if (!name) name = '';
   if (!page) page = 1;
   try {

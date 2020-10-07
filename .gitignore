@@ -4,6 +4,6 @@ src/public
 
 package-log.json
 yarn.lock
-yarn-error.lock
+yarn-error.log
 .env
 

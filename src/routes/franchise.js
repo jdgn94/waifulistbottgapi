@@ -6,19 +6,20 @@ const { route } = require('./waifus');
 const sequelize = db.sequelize;
 const router = express.Router();
 
-router.get('/search', async (req, res) => {
+router.get('/', async (req, res) => {
   let { name, page } = req.query;
   if (!name) name = '';
   if (!page) page = 1;
   try {
     const franchises = await sequelize.query(`
       SELECT
-        *
+        id,
+        name
       FROM
-        franchises
+        franchises f
       WHERE
-        LOWER(name) LIKE '%${name.toLowerCase()}%' OR
-        LOWER(nickname) LIKE '%${name.toLowerCase()}%'
+        LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%'
       LIMIT 20 OFFSET ${(page - 1) * 20}
     `, { type: sequelize.QueryTypes.SELECT });
 
