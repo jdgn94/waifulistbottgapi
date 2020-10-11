@@ -19,7 +19,9 @@ module.exports = {
 				{ name: 'No Game No Life', nickname: '' },
 				{ name: 'Nisekoi', nickname: '' },
 				{ name: 'Ore no Imouto ga Konna ni Kawaii Wake ga Nai', nickname: 'Oreimo' },
-				{ name: 'Yahari Ore no Seishun Love Come wa Machigatteiru', nickname: 'Oregairu' }
+				{ name: 'Yahari Ore no Seishun Love Come wa Machigatteiru', nickname: 'Oregairu' },
+				{ name: 'Shokugeki no Souma', nickname: '' },
+				{ name: 'Kishuku Gakkou no Juliet', nickname: '' }
 			],
 			{}
 		);

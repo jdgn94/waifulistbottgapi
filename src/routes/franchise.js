@@ -42,7 +42,6 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/create', async (req, res) => {
-  console.log(req.body);
   const { name, nickname } = req.body;
   try {
     await Franchise.create({ name, nickname });
@@ -53,14 +52,11 @@ router.post('/create', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-  console.log(req.params);
   const { id } = req.params;
   try {
     const franchise = await Franchise.findOne({ where: { id }});
-    console.log(franchise);
     return res.status(200).send(franchise);
   } catch (error) {
-    console.log(error)
     return res.status(500).send(error);
   }
 });

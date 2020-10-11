@@ -9,6 +9,8 @@ const baseURL = '/api';
 const waifus = require('./routes/waifus');
 const franchises = require('./routes/franchise');
 const waifuTypes = require('./routes/waifu_type');
+const chats = require('./routes/chats');
+const waifuLists = require('./routes/waifu_list');
 
 // initialization
 const app = express();
@@ -34,5 +36,7 @@ app.use(multer({ storage }).single('image'))
 app.use(baseURL + '/waifus', waifus);
 app.use(baseURL + '/franchises', franchises);
 app.use(baseURL + '/waifu_types', waifuTypes);
+app.use(baseURL + '/chats', chats);
+app.use(baseURL + '/waifu_list', waifuLists);
 
 module.exports = app;
