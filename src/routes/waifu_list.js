@@ -1,5 +1,4 @@
 const express = require('express');
-const { create } = require('handlebars');
 const db = require('../models');
 const Trades = require('../models').trade;
 const WaifuLists = require('../models').waifu_list;
