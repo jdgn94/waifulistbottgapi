@@ -52,6 +52,7 @@ router.get('/:chatId', async (req, res) => {
   const { chatId } = req.params;
   try {
     const chat = await Chats.findOne({ where: { chat_id_tg: chatId } });
+    if (!chat) return res.status(201).send();
     const active = await Actives.findOne({ where: { chat_id: chat.dataValues.id } });
     if (active != null) return res.status(201).send();
     await sequelize.query(`
