@@ -263,7 +263,7 @@ router.post('/change_favorite', async (req, res) => {
       LIMIT 1 OFFSET ${waifuNumber - 1}
     `, { type: sequelize.QueryTypes.SELECT });
 
-    if (!waifu[0].id) return res.status(201).send();
+    if (waifu.length == 0) return res.status(201).send();
 
     const list = await sequelize.query(`
       SELECT 
@@ -306,13 +306,18 @@ router.post('/change_favorite', async (req, res) => {
       if (item.id == null) {
         await sequelize.query(`
           INSERT INTO waifu_favorite_lists
-          SET waifu_list_id = ${item.waifu_list_id}, position = ${item.position}
+          SET
+            waifu_list_id = ${item.waifu_list_id},
+            position = ${item.position},
+            chat_id = ${chatId},
+            user_id = ${userId}
         `, { type: sequelize.QueryTypes.INSERT });
       } else {
         await sequelize.query(`
           UPDATE waifu_favorite_lists
           SET position = ${item.position}
-          WHERE id = ${item.id}
+          WHERE
+            id = ${item.id}
         `, { type: sequelize.QueryTypes.UPDATE });
       }
     })
