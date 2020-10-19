@@ -43,6 +43,8 @@ router.get('/', async (req, res) => {
         LOWER(wt.name) LIKE '%${name.toLowerCase()}%' OR
         LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
         LOWER(f.nickname) LIKE '%${name.toLowerCase()}%'
+      ORDER BY
+        f.name ASC, w.name ASC
       LIMIT 20 OFFSET ${(page - 1) * 20}
     `,
     { type: sequelize.QueryTypes.SELECT });
@@ -199,20 +201,29 @@ router.post('/protecc', async (req, res) => {
         default: break;
       }
 
-      switch(waifu.age){
-        case 0:
-          messageResponse += ' pero... ¿acaso sabes cual es su edad?';
-          break;
-        case waifu.age > 0 && waifu.age < 17:
-          messageResponse += `... pero es menor de edad, el FBI te esta vigilando`;
-          break;
-        case 17:
-          messageResponse += `... dejame decirte que todavía es ilegal así que estas bajo vigilancia`;
-          break;
-        case waifu.age > 17 && waifu.age < 50:
-          messageResponse += ` esta es completamente legal, no te preocupes`;
-        default:
-          messageResponse += ' pero... ¿acaso sabes cual es su edad?';
+      // switch(waifu.age){
+      //   case 0:
+      //     messageResponse += ' pero... ¿acaso sabes cual es su edad?';
+      //     break;
+      //   case waifu.age > 0 && waifu.age < 17:
+      //     messageResponse += `... pero es menor de edad, el FBI te esta vigilando`;
+      //     break;
+      //   case 17:
+      //     messageResponse += `... dejame decirte que todavía es ilegal así que estas bajo vigilancia`;
+      //     break;
+      //   case waifu.age > 17 && waifu.age < 50:
+      //     messageResponse += ` esta es completamente legal, no te preocupes`;
+      //   default:
+      //     messageResponse += ' pero... ¿acaso sabes cual es su edad?';
+      // }
+      if (waifu.age > 0 && waifu.age < 17) {
+        messageResponse += `... pero es menor de edad, el FBI te esta vigilando`;
+      } else if(waifu.age == 17) {
+        messageResponse += `... dejame decirte que todavía es ilegal así que estas bajo vigilancia`;
+      } else if(waifu.age > 17 && waifu.age < 50) {
+        messageResponse += ` esta es completamente legal, no te preocupes`;
+      } else {
+        messageResponse += ' pero... ¿acaso sabes cual es su edad?';
       }
     } else {
       messageResponse = 'No ese no es su nombre';
