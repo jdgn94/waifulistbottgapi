@@ -93,7 +93,7 @@ router.get('/details', async (req, res) => {
   
     if (data.ilegals > data.indefinides && data.ilegals > data.legals) message = 'Dejame decirte que estas en problemas, te gustan mucho las ilegales cuidado con el FBI que te tiene bien vigilado, aqui el total de waifus en tu lista: ';
     else if (data.legals > data.indefinides && data.legals > data.ilegals) message = 'Dejame decirte que estas en lo legal, no tengo nada que decir solo que aqui esta la cantidad de waifus en tu lista: ';
-    else if(data.indefinides > data.legals && data.indefinides > data.ilegals) message = 'Dejame decirte que no estas en problemas pero no sabia que tus gustos eran hacia las muy mayores, aqui el numero total de tus waifus: ';
+    else if(data.indefinides > data.legals && data.indefinides > data.ilegals) message = 'Dejame decirte que no estas en problemas pero no sabía que tus gustos eran hacia las mayores, aqui el numero total de tus waifus: ';
     else if (data.ilegals == data.indefinides && data.ilegals == data.legals) message = 'Tu eres una persona completamente neutral, me agradas mucho, aqui esta la cantidad total de tus waifus: ';
     else if (data.ilegals == data.indefinides || data.ilegals == data.legals) message = 'Tus gustos son un tanto extraño, el FBI te tiene en su lista aunque solo te vigilan aveces, aqui esta la cantidad de waifus que tienes: ';
     else message = 'Las que mas te mas tienes son legales, exelente eres una persona que va por el camino correcto de la vida, aqui el numero de tus waifus: ';
