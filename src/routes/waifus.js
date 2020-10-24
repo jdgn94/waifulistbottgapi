@@ -248,7 +248,7 @@ router.post('/change_favorite', async (req, res) => {
   try {
     const waifu = await sequelize.query(`
       SELECT
-        w.id,
+        wl.id,
         w.name
       FROM
         waifu_lists wl
@@ -318,7 +318,7 @@ router.post('/change_favorite', async (req, res) => {
             id = ${item.id}
         `, { type: sequelize.QueryTypes.UPDATE });
       }
-    })
+    });
 
     return res.status(200).send({ message: 'Se ha actualizado tu lista de favoritos' });
   } catch (error) {
