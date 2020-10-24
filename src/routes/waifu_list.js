@@ -65,26 +65,18 @@ router.get('/details', async (req, res) => {
   try {
     const details = await sequelize.query(`
       SELECT
-        (CASE WHEN w.age = 0 OR w.age > 40
-          THEN SUM(1)
-          ELSE SUM(0)
-        END) indefinides,
         (CASE WHEN w.age = 0
           THEN SUM(1)
           ELSE SUM(0)
-        END) indefinidesOnly,
+        END) indefinides,
         (CASE WHEN w.age > 0 AND w.age < 18 
           THEN SUM(1)
           ELSE SUM(0)
         END) ilegals,
-        (CASE WHEN w.age > 18 AND w.age <= 40
-          THEN SUM(1)
-          ELSE SUM(0)
-        END) legals,
         (CASE WHEN w.age > 18
           THEN SUM(1)
           ELSE SUM(0)
-        END) legalsOnly,
+        END) legals,
         COUNT(*) totals
       FROM
         waifu_lists wl
@@ -106,7 +98,7 @@ router.get('/details', async (req, res) => {
     else if (data.ilegals == data.indefinides || data.ilegals == data.legals) message = 'Tus gustos son un tanto extraño, el FBI te tiene en su lista aunque solo te vigilan aveces, aqui esta la cantidad de waifus que tienes: ';
     else message = 'Las que mas te mas tienes son legales, exelente eres una persona que va por el camino correcto de la vida, aqui el numero de tus waifus: ';
 
-    return res.status(200).send({ message, legals: data.legalsOnly, ilegals: data.ilegals, indefinides: data.indefinidesOnly, totals: data.totals });
+    return res.status(200).send({ message, legals: data.legals, ilegals: data.ilegals, indefinides: data.indefinides, totals: data.totals });
   } catch (error) {
     console.error(error);
     return res.status(500).send(error);

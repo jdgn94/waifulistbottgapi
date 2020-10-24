@@ -281,7 +281,7 @@ router.post('/change_favorite', async (req, res) => {
       ORDER BY wfl.position ASC
     `, { type: sequelize.QueryTypes.SELECT });
 
-    const newList = [];
+    let newList = [];
     let insert = false;
 
     await list.forEach(async (item, index) => {
@@ -308,9 +308,7 @@ router.post('/change_favorite', async (req, res) => {
           INSERT INTO waifu_favorite_lists
           SET
             waifu_list_id = ${item.waifu_list_id},
-            position = ${item.position},
-            chat_id = ${chatId},
-            user_id = ${userId}
+            position = ${item.position}
         `, { type: sequelize.QueryTypes.INSERT });
       } else {
         await sequelize.query(`
@@ -362,7 +360,7 @@ router.get('/:id', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, nickname, age, waifu_type_id, franchise_id } = req.body;
+  const { name, nickname, age, waifu_type_id, franchise_id, servant } = req.body;
   try {
     const waifu = await Waifu.findOne({ where: { id } });
     let result;
@@ -381,6 +379,7 @@ router.put('/:id', async (req, res) => {
         name = '${name}',
         nickname = '${nickname}',
         age = ${age},
+        servant = ${servant},
         public_id = '${result.public_id}',
         image_url = '${result.secure_url}',
         waifu_type_id = ${waifu_type_id},
