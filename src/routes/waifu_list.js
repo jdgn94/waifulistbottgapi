@@ -150,7 +150,7 @@ router.get('/favorites', async (req, res) => {
         END) franchise,
         w.public_id,
         w.image_url,
-        w.faf_public_id,
+        w.fav_public_id,
         w.fav_image_url,
         wfl.position
       FROM
