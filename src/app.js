@@ -30,7 +30,10 @@ const storage = multer.diskStorage({
     cb(null, uuid.v4() + path.extname(file.originalname));
   }
 });
-app.use(multer({ storage }).single('image'))
+app.use(multer({ storage }).fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'fav_img', maxCount: 1 }
+]));
 
 // routes
 app.use(baseURL + '/waifus', waifus);

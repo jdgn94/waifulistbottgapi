@@ -47,6 +47,12 @@ module.exports = {
       image_url: {
         type: Sequelize.STRING
       },
+      fav_public_id: {
+        type: Sequelize.STRING
+      },
+      fav_image_url: {
+        type: Sequelize.STRING
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,

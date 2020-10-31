@@ -21,7 +21,9 @@ module.exports = (sequelize, DataTypes) => {
     waifu_type_id: DataTypes.INTEGER,
     franchise_id: DataTypes.INTEGER,
     public_id: DataTypes.STRING,
-    image_url: DataTypes.STRING
+    image_url: DataTypes.STRING,
+    fav_public_id: DataTypes.STRING,
+    fav_image_url: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'waifu',

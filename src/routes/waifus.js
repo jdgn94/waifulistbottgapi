@@ -74,19 +74,29 @@ router.get('/', async (req, res) => {
 
 router.post('/create', async (req, res) => {
   const { name, nickname, age, waifu_type_id, servant, franchise_id } = req.body;
+  const { image, fav_img } = req.files
 
-  const result = await uploadPhoto(req.file.path);
-  const waifu = await Waifu.create({
-    name,
-    nickname,
-    age,
-    waifu_type_id,
-    servant,
-    franchise_id,
-    public_id: result.public_id,
-    image_url: result.secure_url
-  });
-  return res.status(200).send()
+  try {
+    const imageDefault = await uploadPhoto(image.path);
+    const imageFavorite = fav_img > 1 ? await uploadPhoto(fav_img.path) : { public_id: null, secure_url: null };
+    const waifu = await Waifu.create({
+      name,
+      nickname,
+      age,
+      waifu_type_id,
+      servant,
+      franchise_id,
+      public_id: imageDefault.public_id,
+      image_url: imageDefault.secure_url,
+      fav_public_id: imageFavorite.public_id,
+      fav_image_url: imageFavorite.secure_url
+    });
+
+    return res.status(200).send()
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send(error)
+  }
 });
 
 router.get('/send_waifu', async (req, res) => {
@@ -361,16 +371,26 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { name, nickname, age, waifu_type_id, franchise_id, servant } = req.body;
+  const { image, fav_img } = req.files
   try {
     const waifu = await Waifu.findOne({ where: { id } });
-    let result;
+    let imageDefault;
+    let imageFavorite;
 
-    if (req.file) {
+    if (image) {
       await cloudinary.v2.uploader.destroy(waifu.public_id);
   
-      result = await uploadPhoto(req.file.path);
+      imageDefault = await uploadPhoto(image.path);
     } else {
-      result = { public_id: waifu.public_id, secure_url: waifu.image_url };
+      imageDefault = { public_id: waifu.public_id, secure_url: waifu.image_url };
+    }
+
+    if (fav_img) {
+      await cloudinary.v2.uploader.destroy(waifu.public_id);
+  
+      imageFavorite = await uploadPhoto(fav_img.path);
+    } else {
+      imageFavorite = { public_id: waifu.public_id, secure_url: waifu.image_url };
     }
 
     await sequelize.query(`
@@ -380,8 +400,10 @@ router.put('/:id', async (req, res) => {
         nickname = '${nickname}',
         age = ${age},
         servant = ${servant},
-        public_id = '${result.public_id}',
-        image_url = '${result.secure_url}',
+        public_id = '${imageDefault.public_id}',
+        image_url = '${imageDefault.secure_url}',
+        fav_public_id = '${imageFavorite.public_id}',
+        fav_image_url = '${imageFavorite.secure_url}',
         waifu_type_id = ${waifu_type_id},
         franchise_id = ${franchise_id}
       WHERE id = ${id}
