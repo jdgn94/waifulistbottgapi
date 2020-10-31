@@ -63,21 +63,9 @@ router.get('/', async (req, res) => {
 router.get('/details', async (req, res) => {
   const { userId, chatId } = req.query;
   try {
-    const details = await sequelize.query(`
+    const total = await sequelize.query(`
       SELECT
-        (CASE WHEN w.age = 0
-          THEN SUM(1)
-          ELSE SUM(0)
-        END) indefinides,
-        (CASE WHEN w.age > 0 AND w.age < 18 
-          THEN SUM(1)
-          ELSE SUM(0)
-        END) ilegals,
-        (CASE WHEN w.age > 18
-          THEN SUM(1)
-          ELSE SUM(0)
-        END) legals,
-        COUNT(*) totals
+        COUNT(*) total
       FROM
         waifu_lists wl
         INNER JOIN waifus w ON w.id = wl.waifu_id
@@ -87,15 +75,56 @@ router.get('/details', async (req, res) => {
         u.user_id_tg = ${userId} AND c.chat_id_tg = ${chatId}
       ORDER BY c.id
     `, { type: sequelize.QueryTypes.SELECT });
+
+    const indefinides = await sequelize.query(`
+      SELECT
+        COUNT(*) indefinides
+      FROM
+        waifu_lists wl
+        INNER JOIN waifus w ON w.id = wl.waifu_id
+        INNER JOIN chats c ON c.id = wl.chat_id
+        INNER JOIN users u ON u.id = wl.user_id
+      WHERE 
+        u.user_id_tg = ${userId} AND c.chat_id_tg = ${chatId} AND w.age = 0
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    const ilegals = await sequelize.query(`
+      SELECT
+        COUNT(*) ilegals
+      FROM
+        waifu_lists wl
+        INNER JOIN waifus w ON w.id = wl.waifu_id
+        INNER JOIN chats c ON c.id = wl.chat_id
+        INNER JOIN users u ON u.id = wl.user_id
+      WHERE 
+        u.user_id_tg = ${userId} AND c.chat_id_tg = ${chatId} AND w.age > 0 AND w.age < 18
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    const legals = await sequelize.query(`
+      SELECT
+        COUNT(*) legals
+      FROM
+        waifu_lists wl
+        INNER JOIN waifus w ON w.id = wl.waifu_id
+        INNER JOIN chats c ON c.id = wl.chat_id
+        INNER JOIN users u ON u.id = wl.user_id
+      WHERE 
+        u.user_id_tg = ${userId} AND c.chat_id_tg = ${chatId} AND w.age > 17
+    `, { type: sequelize.QueryTypes.SELECT });
   
-    const data = details[0];
+    const data = {
+      totals: total.length > 0 ? total[0].total: 0,
+      indefinides: indefinides.length > 0 ? indefinides[0].indefinides : 0,
+      ilegals: ilegals.length > 0 ? ilegals[0].ilegals : 0,
+      legals: legals.length > 0 ? legals[0].legals : 0
+    }
     let message = '';
   
-    if (data.ilegals > data.indefinides && data.ilegals > data.legals) message = 'Dejame decirte que estas en problemas, te gustan mucho las ilegales cuidado con el FBI que te tiene bien vigilado, aqui el total de waifus en tu lista: ';
+    if (data.ilegals > data.indefinides && data.ilegals > data.legals) message = 'Dejame decirte que estas en problemas, te gustan mucho las ilegales cuidado con el #FBI que te tiene bien vigilado, aqui el total de waifus en tu lista: ';
     else if (data.legals > data.indefinides && data.legals > data.ilegals) message = 'Dejame decirte que estas en lo legal, no tengo nada que decir solo que aqui esta la cantidad de waifus en tu lista: ';
     else if(data.indefinides > data.legals && data.indefinides > data.ilegals) message = 'Dejame decirte que no estas en problemas pero no sabía que tus gustos eran hacia las mayores, aqui el numero total de tus waifus: ';
     else if (data.ilegals == data.indefinides && data.ilegals == data.legals) message = 'Tu eres una persona completamente neutral, me agradas mucho, aqui esta la cantidad total de tus waifus: ';
-    else if (data.ilegals == data.indefinides || data.ilegals == data.legals) message = 'Tus gustos son un tanto extraño, el FBI te tiene en su lista aunque solo te vigilan aveces, aqui esta la cantidad de waifus que tienes: ';
+    else if (data.ilegals == data.indefinides || data.ilegals == data.legals) message = 'Tus gustos son un tanto extraño, el #FBI te tiene en su lista aunque solo te vigilan aveces, aqui esta la cantidad de waifus que tienes: ';
     else message = 'Las que mas te mas tienes son legales, exelente eres una persona que va por el camino correcto de la vida, aqui el numero de tus waifus: ';
 
     return res.status(200).send({ message, legals: data.legals, ilegals: data.ilegals, indefinides: data.indefinides, totals: data.totals });
