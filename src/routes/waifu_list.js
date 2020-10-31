@@ -303,8 +303,8 @@ router.put('/trade_answer', async (req, res) => {
       return res.status(201).send();
     } 
 
-    const waifusEmisor = [];
-    const waifusReceptor = [];
+    let waifusEmisor = [];
+    let waifusReceptor = [];
 
     await waifusEmisor.push(await searhcWaifu(trade[0].user_emiter_id, trade[0].waifu_emiter_id));
     await waifusReceptor.push(await searhcWaifu(trade[0].user_receptor_id, trade[0].waifu_receptor_id));
