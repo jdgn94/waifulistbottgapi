@@ -270,7 +270,6 @@ router.put('/update_trade', async (req, res) => {
 router.put('/trade_answer', async (req, res) => {
   console.log(req.body);
   const { answer, messageId, userTgId } = req.body;
-  // return res.send();
   try {
     const trade = await sequelize.query(`
       SELECT
@@ -283,6 +282,8 @@ router.put('/trade_answer', async (req, res) => {
         ur.user_id_tg user_id_tg_receptor,
         wlr.id list_receptor_id,
         wlr.waifu_id waifu_receptor_id,
+        weo.id waifu_emisor_origin_id,
+        wro.id waofi_receptor_origin_id,
         wlr.chat_id
       FROM
         trades t
@@ -290,6 +291,8 @@ router.put('/trade_answer', async (req, res) => {
         INNER JOIN users ue ON ue.id = wle.user_id
         INNER JOIN waifu_lists wlr ON wlr.id = t.waifu_receptor_id
         INNER JOIN users ur ON ur.id = wlr.user_id
+        INNER JOIN waifus weo ON weo.id = wle.waifu_id 
+        INNER JOIN waifus wro ON wro.id = wlr.waifu_id 
       WHERE
         t.message_id = '${messageId}'
       LIMIT 1
@@ -312,15 +315,19 @@ router.put('/trade_answer', async (req, res) => {
     await waifusReceptor.push(await searhcWaifu(trade[0].user_receptor_id, trade[0].waifu_emiter_id));
 
     const idEmiter = trade[0].user_emiter_id;
-    const idReceptor = trade[0].user_receptor_id
-    const chatId = trade[0].chatId
+    const idReceptor = trade[0].user_receptor_id;
+    const chatId = trade[0].chat_id;
+    const waifuEmisorOriginId = trade[0].waifu_emisor_origin_id;
+    const waifuReceptorOriginId = trade[0].waofi_receptor_origin_id;
 
     await sequelize.query(`DELETE FROM trades WHERE id = ${trade[0].trade_id}`, { type: sequelize.QueryTypes.DELETE });
 
     console.log(waifusEmisor, waifusReceptor);
     const favoriteEmisor = await verifyFavorite (waifusEmisor[0].id);
     const favoriteReceptor = await verifyFavorite (waifusReceptor[0].id);
+    console.log("emison", idEmiter, "receptor", idReceptor, "chat", chatId);
     if (waifusEmisor[1] == null && waifusReceptor[1] == null) { // INFO caso 1
+      console.log("Entre al caso 1");
       if ((favoriteEmisor == null && favoriteReceptor == null) || (favoriteEmisor.quantity > 1 && favoriteReceptor == null) || (favoriteEmisor.quantity = null && favoriteReceptor > 1) || (favoriteEmisor.quantity > 1 && favoriteReceptor > 1)) {
         const evaluation = caseProcessor(0, waifusEmisor, waifusReceptor);
         switch (evaluation) {
@@ -331,24 +338,25 @@ router.put('/trade_answer', async (req, res) => {
           case 2: // ambos tienen mas de 1
             await removeWaifu(waifusReceptor[0].id);
             await removeWaifu(waifusEmisor[0].id);
-            await createWaifu(idReceptor, waifusEmisor[0].id, chatId);
-            await createWaifu(idEmiter, waifusReceptor[0].id, chatId);
+            await createWaifu(idReceptor, waifuEmisorOriginId, chatId);
+            await createWaifu(idEmiter, waifuReceptorOriginId, chatId);
             break;
             case 3: // el emisor tiene 1 y el receptor mas de 1
             await reasingWaifu(idReceptor, waifusEmisor[0].id);
             await removeWaifu(waifusReceptor[0].id);
-            await createWaifu(idEmiter, waifusReceptor[0].id, chatId)
+            await createWaifu(idEmiter, waifuReceptorOriginId, chatId)
             break;
           default: // el emisor tiene mas de 1 y el receptor solo 1
             await reasingWaifu(idEmiter, waifusReceptor[0].id);
             await removeWaifu(waifusEmisor[0].id);
-            await createWaifu(idReceptor, waifusEmisor[0].id, chatId)
+            await createWaifu(idReceptor, waifuEmisorOriginId, chatId)
             break;
         }
         return res.status(200).send({ message: 'El intercambio fue exitoso' });
       } else return res.status(202).send({ message: `No se puede realizar el intercambio debido a que ${favoriteEmisor.name || favoriteReceptor.name} de ${favoriteEmisor.franchise || favoriteEmisor.franchise} esta marcada como favorita` });
 
     } else if (waifusEmisor[1] != null && waifusReceptor[1] == null) { // INFO caso 2
+      console.log("entre al caso 2");
       if ((favoriteEmisor == null && favoriteReceptor == null) || (favoriteEmisor.quantity > 1 && favoriteReceptor == null) || (favoriteEmisor.quantity = null && favoriteReceptor > 1) || (favoriteEmisor.quantity > 1 && favoriteReceptor > 1)) {
 
         const evaluation = caseProcessor(0, waifusEmisor, waifusReceptor);
@@ -360,7 +368,7 @@ router.put('/trade_answer', async (req, res) => {
           case 2: // ambos tienes mas de 1
             await removeWaifu(waifusReceptor[0].id);
             await removeWaifu(waifusEmisor[0].id);
-            await createWaifu(idReceptor, waifusEmisor[0].id, chatId);
+            await createWaifu(idReceptor, waifuEmisorOriginId, chatId);
             break;
           case 3: // el emisor tiene 1 y el receptor mas de 1
             await removeWaifu(waifusReceptor[0].id);
@@ -369,7 +377,7 @@ router.put('/trade_answer', async (req, res) => {
           default: // el emisor tiene mas de 1 y el receptor solo 1
             await deleteWaifu(waifusReceptor[0].id);
             await removeWaifu(waifusEmisor[0].id);
-            await createWaifu(idReceptor, waifusEmisor[0].id, chatId);
+            await createWaifu(idReceptor, waifuEmisorOriginId, chatId);
             break;
         }
         await addWaifu(waifusEmisor[1].id);
@@ -377,7 +385,7 @@ router.put('/trade_answer', async (req, res) => {
       } else return res.status(202).send({ message: `No se puede realizar el intercambio debido a que ${favoriteEmisor.name || favoriteReceptor.name} de ${favoriteEmisor.franchise || favoriteEmisor.franchise} esta marcada como favorita` });
 
     } else if (waifusEmisor[1] == null && waifusReceptor[1] != null) { // INFO caso 3
-
+      console.log("entre al caso 3");
       if ((favoriteEmisor == null && favoriteReceptor == null) || (favoriteEmisor.quantity > 1 && favoriteReceptor == null) || (favoriteEmisor.quantity = null && favoriteReceptor > 1) || (favoriteEmisor.quantity > 1 && favoriteReceptor > 1)) {
         const evaluation = caseProcessor(0, waifusEmisor, waifusReceptor);
         switch(evaluation) { 
@@ -388,7 +396,7 @@ router.put('/trade_answer', async (req, res) => {
           case 2: // ambos tienes mas de 1
             await removeWaifu(waifusEmisor[0].id);
             await removeWaifu(waifusReceptor[0].id);
-            await createWaifu(idEmiter, waifusReceptor[0].id, chatId);
+            await createWaifu(idEmiter, waifuReceptorOriginId, chatId);
             break;
           case 3: // el emisor tiene 1 y el receptor mas de 1
             await removeWaifu(waifusEmisor[0].id);
@@ -397,14 +405,14 @@ router.put('/trade_answer', async (req, res) => {
           default: // el emisor tiene mas de 1 y el receptor solo 1
             await deleteWaifu(waifusEmisor[0].id);
             await removeWaifu(waifusReceptor[0].id);
-            await createWaifu(idEmiter, waifusReceptor[0].id, chatId);
+            await createWaifu(idEmiter, waifuReceptorOriginId, chatId);
             break;
         }
         await addWaifu(waifusReceptor[1].id);
         return res.status(200).send({ message: 'El intercambio fue exitoso' });
       } else res.status(202).send({ message: `No se puede realizar el intercambio debido a que ${favoriteEmisor.name || favoriteReceptor.name} de ${favoriteEmisor.franchise || favoriteEmisor.franchise} esta marcada como favorita` });
     } else { // INFO caso 4 waifusEmisor[1] != null && waifusReceptor[1] != null
-
+      console.log("entre al caso 4");
       if ((favoriteEmisor == null && favoriteReceptor == null) || (favoriteEmisor.quantity > 1 && favoriteReceptor == null) || (favoriteEmisor.quantity = null && favoriteReceptor > 1) || (favoriteEmisor.quantity > 1 && favoriteReceptor > 1)) {
         const evaluation = caseProcessor(0, waifusEmisor, waifusReceptor);
         switch(evaluation) {
@@ -526,7 +534,7 @@ async function reasingWaifu(userId, waifuListId) {
 }
 
 async function createWaifu(userId, waifuId, chatId) {
-  await WaifuLists.create({ user_id: userId, waifu_id: waifuId, chat_id: chatId });
+  await WaifuLists.create({ user_id: userId, waifu_id: waifuId, chat_id: chatId, quantity: 1 });
   return;
 }
 
