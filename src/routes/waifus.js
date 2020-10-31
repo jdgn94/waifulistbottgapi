@@ -77,8 +77,8 @@ router.post('/create', async (req, res) => {
   const { image, fav_img } = req.files
 
   try {
-    const imageDefault = await uploadPhoto(image.path);
-    const imageFavorite = fav_img > 1 ? await uploadPhoto(fav_img.path) : { public_id: null, secure_url: null };
+    const imageDefault = await uploadPhoto(image[0].path);
+    const imageFavorite = fav_img > 1 ? await uploadPhoto(fav_img[0].path) : { public_id: null, secure_url: null };
     const waifu = await Waifu.create({
       name,
       nickname,
@@ -380,7 +380,7 @@ router.put('/:id', async (req, res) => {
     if (image) {
       await cloudinary.v2.uploader.destroy(waifu.public_id);
   
-      imageDefault = await uploadPhoto(image.path);
+      imageDefault = await uploadPhoto(image[0].path);
     } else {
       imageDefault = { public_id: waifu.public_id, secure_url: waifu.image_url };
     }
@@ -388,7 +388,7 @@ router.put('/:id', async (req, res) => {
     if (fav_img) {
       await cloudinary.v2.uploader.destroy(waifu.public_id);
   
-      imageFavorite = await uploadPhoto(fav_img.path);
+      imageFavorite = await uploadPhoto(fav_img[0].path);
     } else {
       imageFavorite = { public_id: waifu.public_id, secure_url: waifu.image_url };
     }
