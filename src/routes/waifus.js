@@ -210,22 +210,6 @@ router.post('/protecc', async (req, res) => {
           break;
         default: break;
       }
-
-      // switch(waifu.age){
-      //   case 0:
-      //     messageResponse += ' pero... ¿acaso sabes cual es su edad?';
-      //     break;
-      //   case waifu.age > 0 && waifu.age < 17:
-      //     messageResponse += `... pero es menor de edad, el FBI te esta vigilando`;
-      //     break;
-      //   case 17:
-      //     messageResponse += `... dejame decirte que todavía es ilegal así que estas bajo vigilancia`;
-      //     break;
-      //   case waifu.age > 17 && waifu.age < 50:
-      //     messageResponse += ` esta es completamente legal, no te preocupes`;
-      //   default:
-      //     messageResponse += ' pero... ¿acaso sabes cual es su edad?';
-      // }
       if (waifu.age > 0 && waifu.age < 17) {
         messageResponse += `... pero es menor de edad, el FBI te esta vigilando`;
       } else if(waifu.age == 17) {
@@ -348,6 +332,7 @@ router.get('/:id', async (req, res) => {
         w.age,
         w.servant,
         w.image_url,
+        w.fav_image_url,
         wt.id AS waifu_type_id,
         wt.name AS waifu_type_name,
         f.id AS franchise_id,
