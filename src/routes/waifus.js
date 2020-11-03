@@ -72,6 +72,23 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/active', async (req, res) => {
+  try {
+    const waifus = await sequelize.query(`
+      SELECT
+        w.name,
+        w.nickname
+      FROM
+        actives a
+        INNER JOIN waifus.w ON a.waifu_id = w.id
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    return res.status(200).send(waifus)
+  } catch (error) {
+    return res.status(500).send(error);
+  }
+});
+
 router.post('/create', async (req, res) => {
   const { name, nickname, age, waifu_type_id, servant, franchise_id } = req.body;
   const { image, fav_img } = req.files
