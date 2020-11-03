@@ -80,7 +80,7 @@ router.get('/active', async (req, res) => {
         w.nickname
       FROM
         actives a
-        INNER JOIN waifus.w ON a.waifu_id = w.id
+        INNER JOIN waifus w ON a.waifu_id = w.id 
     `, { type: sequelize.QueryTypes.SELECT });
 
     return res.status(200).send(waifus)
