@@ -379,7 +379,7 @@ router.put('/:id', async (req, res) => {
     let imageDefault;
     let imageFavorite;
 
-    if (image[0]) {
+    if (image) {
       await cloudinary.v2.uploader.destroy(waifu.public_id);
   
       imageDefault = await uploadPhoto(image[0].path);
@@ -387,7 +387,7 @@ router.put('/:id', async (req, res) => {
       imageDefault = { public_id: waifu.public_id, secure_url: waifu.image_url };
     }
 
-    if (fav_img[0]) {
+    if (fav_img) {
       if (waifu.fav_public_id) await cloudinary.v2.uploader.destroy(waifu.fav_public_id);
   
       imageFavorite = await uploadPhoto(fav_img[0].path);
