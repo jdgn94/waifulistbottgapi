@@ -95,7 +95,7 @@ router.post('/create', async (req, res) => {
 
   try {
     const imageDefault = await uploadPhoto(image[0].path);
-    const imageFavorite = fav_img > 0 ? await uploadPhoto(fav_img[0].path) : { public_id: null, secure_url: null };
+    const imageFavorite = fav_img ? await uploadPhoto(fav_img[0].path) : { public_id: null, secure_url: null };
     const waifu = await Waifu.create({
       name,
       nickname,
