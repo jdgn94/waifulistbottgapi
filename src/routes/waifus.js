@@ -393,7 +393,7 @@ router.put('/:id', async (req, res) => {
   
       imageFavorite = await uploadPhoto(fav_img[0].path);
     } else {
-      imageFavorite = { public_id: waifu.public_id, secure_url: waifu.image_url };
+      imageFavorite = { public_id: waifu.fav_public_id, secure_url: waifu.fav_image_url };
     }
 
     await sequelize.query(`
