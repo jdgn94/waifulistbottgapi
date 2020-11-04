@@ -374,6 +374,7 @@ router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { name, nickname, age, waifu_type_id, franchise_id, servant } = req.body;
   const { image, fav_img } = req.files
+  console.log(req.files);
   try {
     const waifu = await Waifu.findOne({ where: { id } });
     let imageDefault;
