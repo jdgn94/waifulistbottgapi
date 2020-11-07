@@ -296,20 +296,22 @@ router.post('/change_favorite', async (req, res) => {
     let insert = false;
 
     await list.forEach(async (item, index) => {
-      if (position - 1 == index) {
-        insert = true;
-        await newList.push({ id: null, waifu_list_id: waifu[0].id, position: index + 1 });
-        await newList.push({ id: item.id, waifu_list_id:item.waifu_list_id, position: index + 2 });
-      } else if (insert) {
-        await newList.push({ id: item.id, waifu_list_id: item.waifu_list_id, position: index + 2 });
-      } else {
-        await newList.push({ id: item.id, waifu_list_id: item.waifu_list_id, position: index + 1 });
+      if (item.waifu_list_id != waifu[0].id) {
+        if (position - 1 == index) {
+          insert = true;
+          await newList.push({ id: null, waifu_list_id: waifu[0].id, position: index + 1 });
+          await newList.push({ id: item.id, waifu_list_id:item.waifu_list_id, position: index + 2 });
+        } else if (insert) {
+          await newList.push({ id: item.id, waifu_list_id: item.waifu_list_id, position: index + 2 });
+        } else {
+          await newList.push({ id: item.id, waifu_list_id: item.waifu_list_id, position: index + 1 });
+        }
       }
     });
     if (!insert) await newList.push({ id: null, waifu_list_id: waifu[0].id, position: list.length + 1 });
 
     if (newList.length > 9) {
-      await sequelize.query(`DELETE FROM waifu_favorite_lists WHERE id = ${newList[9].id}`, { type: sequelize.QueryTypes.DELETE });
+      await sequelize.query(`DELETE FROM waifu_favorite_lists WHERE waifu_list_id = ${newList[9].waifu_list_id}`, { type: sequelize.QueryTypes.DELETE });
       newList = await newList.pop();
     }
 
