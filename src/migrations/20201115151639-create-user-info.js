@@ -1,66 +1,48 @@
 'use strict';
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('waifus', {
+    await queryInterface.createTable('user_infos', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      name: {
-        type: Sequelize.STRING
-      },
-      nickname: {
-        type: Sequelize.STRING
-      },
-      age: {
+      user_id: {
         type: Sequelize.INTEGER,
-        defaultValue: 18
-      },
-      servant: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: false
-      },
-      waifu_type_id: {
-        type: Sequelize.INTEGER,
+        allowNull: false,
         references: {
-          model: 'waifu_types',
+          model: 'users',
           key: 'id'
         },
         onDelete: 'NO ACTION',
         onUpdate: 'NO ACTION'
       },
-      franchise_id: {
+      chat_id: {
         type: Sequelize.INTEGER,
+        allowNull: false,
         references: {
-          model: 'franchises',
+          model: 'chats',
           key: 'id'
         },
         onDelete: 'NO ACTION',
         onUpdate: 'NO ACTION'
-
       },
-      public_id: {
-        type: Sequelize.STRING
-      },
-      image_url: {
-        type: Sequelize.STRING
-      },
-      fav_public_id: {
-        type: Sequelize.STRING
-      },
-      fav_image_url: {
-        type: Sequelize.STRING
-      },
-      waifu_id: {
+      level: {
         type: Sequelize.INTEGER,
-        references: {
-          model: 'waifus',
-          key: 'id'
-        },
-        onDelete: 'NO ACTION',
-        onUpdate: 'NO ACTION'
+        defaultValue: 1
+      },
+      points: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0
+      },
+      exp: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0
+      },
+      limit_exp: {
+        type: Sequelize.INTEGER,
+        defaultValue: 100
       },
       createdAt: {
         allowNull: false,
@@ -75,6 +57,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('waifus');
+    await queryInterface.dropTable('user_infos');
   }
 };

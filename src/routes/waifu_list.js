@@ -136,7 +136,7 @@ router.get('/details', async (req, res) => {
 
 router.get('/favorites', async (req, res) => {
   console.log("llegue a la llamada de los favoritos")
-  const { chatId, userId } = req.query;
+  const { chatId, userId, page } = req.query;
   try {
     const waifus = await sequelize.query(`
       SELECT
@@ -164,10 +164,27 @@ router.get('/favorites', async (req, res) => {
         c.chat_id_tg = '${chatId}' AND u.user_id_tg = '${userId}'
       ORDER BY
         wfl.position ASC
+      LIMIT 10 OFFSET ${page - 1};
     `, { type: sequelize.QueryTypes.SELECT });
 
+    const totalItems = await sequelize.query(`
+      SELECT
+        COUNT(wfl.id) total
+      FROM
+        waifu_favorite_lists wfl
+        INNER JOIN waifu_lists wl ON wl.id = wfl.waifu_list_id
+        INNER JOIN chats c ON c.id = wl.chat_id
+        INNER JOIN users u ON u.id = wl.user_id
+      WHERE
+        c.chat_id_tg = '${chatId}' AND u.user_id_tg = '${userId}'
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    console.log(totalItems);
+
+    const totalPages = parseInt(totalItems[0].total / 10) + 1;
+
     console.log(waifus);
-    if (waifus.length > 0) return res.status(200).send({ waifus });
+    if (waifus.length > 0) return res.status(200).send({ waifus, totalPages, actualPage: page });
     return res.status(201).send({ message: 'Parece que todavia no has agregado ninguna waifu a esta lista, lo puedes hacer por el comando /addfavorite <numero en tu lista> <posición>' });
   } catch (error) {
     console.error(error)

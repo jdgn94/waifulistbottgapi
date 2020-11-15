@@ -20,6 +20,9 @@ module.exports = {
       user_id_tg: {
         type: Sequelize.STRING
       },
+      nickname: {
+        type: Sequelize.STRING,
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,

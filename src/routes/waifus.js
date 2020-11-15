@@ -2,11 +2,14 @@ const Waifu = require('../models').waifu;
 const Active = require('../models').active;
 const Chat = require('../models').chat;
 const User = require('../models').user;
+const UserInfo = require('../models').user_info;
 const WaifuList = require('../models').waifu_list;
+const UserInfos = require('../models').user_info;
 const db = require('../models');
 const fs = require('fs-extra');
 const cloudinary = require('cloudinary');
 const express = require('express');
+const utilUserInfo = require('../utils/userInfo');
 
 const router = express.Router();
 const sequelize = db.sequelize;
@@ -146,6 +149,7 @@ router.post('/protecc', async (req, res) => {
         w.name,
         w.nickname,
         w.age,
+        w.fav_image_url,
         wt.id waifu_type_id,
         wt.name waifu_type_name,
         f.name franchise_name,
@@ -163,7 +167,7 @@ router.post('/protecc', async (req, res) => {
         c.chat_id_tg = '${message.chat.id}'
     `, { type: sequelize.QueryTypes.SELECT });
     if (data.length == 0) return res.status(201).send();
-    const waifu = data[0]
+    const waifu = data[0];
     const { name, nickname } = waifu;
     const nicknameArr = nickname.split(' ');
     const nameArr = name.split(' ');
@@ -186,10 +190,12 @@ router.post('/protecc', async (req, res) => {
     }
 
     let messageResponse = '';
+    let aditionalMessage;
 
     if (match) {
       let user = await User.findOne({ where: { user_id_tg: message.from.id } });
       const chat = await Chat.findOne({ where: { chat_id_tg: message.chat.id } });
+      let userInfo = await UserInfo.findOne({ where: { user_id: user.id, chat_id: chat.id } });
       console.log("datos del usuario en el mensaje", message.from);
       if (!user) {
         user = await User.create({ user_id_tg: message.from.id, nickname: `${message.from.first_name}` });
@@ -207,6 +213,14 @@ router.post('/protecc', async (req, res) => {
           SET quantity = quantity + 1
           WHERE id = ${waifuInList.dataValues.id}
         `);
+      }
+
+      const expType = { type: 'newWaifu', imgFavorite: waifu.fav_image_url != '' && waifu.fav_image_url != null ? true : false };
+      if (userInfo) {
+       aditionalMessage = await utilUserInfo.addExpUser(userInfo.id, expType);
+      } else {
+        userInfo = await UserInfo.create({ user_id: user.id, chat_id: chat.id });
+       aditionalMessage = await utilUserInfo.addExpUser(userInfo.id, expType);
       }
 
       await sequelize.query(`DELETE FROM actives WHERE id = ${waifu.active_id}`, { type: sequelize.QueryTypes.DELETE });
@@ -247,6 +261,7 @@ router.post('/protecc', async (req, res) => {
         await sequelize.query(`DELETE FROM actives WHERE id = ${waifu.active_id}`, { type: sequelize.QueryTypes.DELETE });
       }
     }
+    messageResponse += '\n' + aditionalMessage;
     return res.status(200).send({ message: messageResponse });
   } catch (error) {
     console.error(error);
@@ -259,8 +274,7 @@ router.post('/change_favorite', async (req, res) => {
   try {
     const waifu = await sequelize.query(`
       SELECT
-        wl.id,
-        w.name
+        wl.id
       FROM
         waifu_lists wl
         INNER JOIN waifus w ON w.id = wl.waifu_id
@@ -289,29 +303,54 @@ router.post('/change_favorite', async (req, res) => {
       WHERE
         c.chat_id_tg = ${chatId} AND
         u.user_id_tg = ${userId}
-      ORDER BY wfl.position ASC
+      ORDER BY wfl.position ASC 
     `, { type: sequelize.QueryTypes.SELECT });
+
+    const userInfo = await sequelize.query(`
+      SELECT
+        ui.level
+      FROM
+        user_infos ui
+        INNER JOIN chats c ON ui.chat_id = c.id
+        INNER JOIN users u ON u.id = ui.user_id
+      WHERE
+        c.chat_id_tg = ${chatId} AND
+        u.user_id_tg = ${userId}
+    `, { type: sequelize.QueryTypes.SELECT  });
 
     let newList = [];
     let insert = false;
 
-    await list.forEach(async (item, index) => {
-      if (item.waifu_list_id != waifu[0].id) {
-        if (position - 1 == index) {
-          insert = true;
-          await newList.push({ id: null, waifu_list_id: waifu[0].id, position: index + 1 });
-          await newList.push({ id: item.id, waifu_list_id:item.waifu_list_id, position: index + 2 });
-        } else if (insert) {
-          await newList.push({ id: item.id, waifu_list_id: item.waifu_list_id, position: index + 2 });
+    const waifusNoSelected = list.filter(item => item.waifu_list_id != waifu[0].id);
+    const waifuSelected = list.filter(item => item.waifu_list_id == waifu[0].id);
+    if (waifuSelected.length > 1) {
+      for (let i = 1; i < waifuSelected.length; i++) {
+        await sequelize.query(`
+          DELETE FROM waifu_favorite_lists WHERE waifu_favorite_lists.id = ${waifuSelected[i].id}
+        `, { type: sequelize.QueryTypes.DELETE });
+      }
+    }
+
+    await waifusNoSelected.forEach(async (item, index) => {
+      if (position - 1 == index) {
+        insert = true;
+        if (waifuSelected.length > 0) {
+          await newList.push({ id: waifuSelected[0].id, waifu_list_id:waifuSelected[0].waifu_list_id, position: index + 1 });
         } else {
-          await newList.push({ id: item.id, waifu_list_id: item.waifu_list_id, position: index + 1 });
+          await newList.push({ id: null, waifu_list_id: waifu[0].id, position: index + 1 });
         }
+        await newList.push({ id: item.id, waifu_list_id:item.waifu_list_id, position: index + 2 });
+      } else if (insert) {
+        await newList.push({ id: item.id, waifu_list_id: item.waifu_list_id, position: index + 2 });
+      } else {
+        await newList.push({ id: item.id, waifu_list_id: item.waifu_list_id, position: index + 1 });
       }
     });
     if (!insert) await newList.push({ id: null, waifu_list_id: waifu[0].id, position: list.length + 1 });
 
-    if (newList.length > 9) {
-      await sequelize.query(`DELETE FROM waifu_favorite_lists WHERE waifu_list_id = ${newList[9].waifu_list_id}`, { type: sequelize.QueryTypes.DELETE });
+    const totalAvailable = (parseInt(userInfo[0].level / 5) + 1) * 10;
+    if (newList.length > totalAvailable) {
+      await sequelize.query(`DELETE FROM waifu_favorite_lists WHERE waifu_list_id = ${newList[totalAvailable - 1].waifu_list_id}`, { type: sequelize.QueryTypes.DELETE });
       newList = await newList.pop();
     }
 
