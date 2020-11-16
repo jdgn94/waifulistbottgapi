@@ -190,7 +190,7 @@ router.post('/protecc', async (req, res) => {
     }
 
     let messageResponse = '';
-    let aditionalMessage;
+    let aditionalMessage = '';
 
     if (match) {
       let user = await User.findOne({ where: { user_id_tg: message.from.id } });
