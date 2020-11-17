@@ -61,7 +61,7 @@ router.get('/:chatId', async (req, res) => {
       WHERE id = ${chat.dataValues.id}
     `, { type: sequelize.QueryTypes.UPDATE });
 
-    if (chat.message_quantity + 1 >= chat.message_limit) return res.status(200).send(true)
+    if (chat.message_quantity + 1 >= chat.message_limit) return res.status(200).send()
     return res.status(201).send();
   } catch (error) {
     console.error(error)

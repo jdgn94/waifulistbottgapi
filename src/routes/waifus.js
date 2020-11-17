@@ -125,7 +125,7 @@ router.get('/send_waifu', async (req, res) => {
     const chatData = await Chat.findOne({ where: { chat_id_tg: chatId } });
     const chat = chatData.dataValues;
     const active = await Active.findOne({ where: { chat_id: chat.id } });
-    if (active != null) return res.status(201).send();
+    if (active) return res.status(201).send();
     await sequelize.query(`UPDATE chats SET message_quantity = 0 WHERE id = ${chat.id}`, { type: sequelize.QueryTypes.UPDATE });
     const waifusQuantities = await sequelize.query(`SELECT COUNT(*) total FROM waifus`, { type: sequelize.QueryTypes.SELECT });
     const waifuId = Math.round(Math.random() * (1 - waifusQuantities[0].total) + waifusQuantities[0].total);
