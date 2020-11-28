@@ -31,7 +31,8 @@ router.get('/', async (req, res) => {
         INNER JOIN franchises f ON f.id = w.franchise_id
       WHERE
         u.user_id_tg = '${userTgId}' AND 
-        c.chat_id_tg = '${chatTgId}'
+        c.chat_id_tg = '${chatTgId}' AND
+        wl.quantity > 0
       ORDER BY
           f.name ASC, w.name ASC
       LIMIT 20 OFFSET ${(page - 1) * 20}
@@ -48,7 +49,8 @@ router.get('/', async (req, res) => {
         INNER JOIN franchises f ON f.id = w.franchise_id
       WHERE
         u.user_id_tg = '${userTgId}' AND 
-        c.chat_id_tg = '${chatTgId}'
+        c.chat_id_tg = '${chatTgId}' AND
+        wl.quantity > 0
     `, { type: sequelize.QueryTypes.SELECT });
 
     const totalPages = Math.ceil(totalItems[0].total_items / 20);
@@ -72,7 +74,9 @@ router.get('/details', async (req, res) => {
         INNER JOIN chats c ON c.id = wl.chat_id
         INNER JOIN users u ON u.id = wl.user_id
       WHERE 
-        u.user_id_tg = ${userId} AND c.chat_id_tg = ${chatId}
+        u.user_id_tg = ${userId} AND
+        c.chat_id_tg = ${chatId} AND
+        wl.quantity > 0
       ORDER BY c.id
     `, { type: sequelize.QueryTypes.SELECT });
 
@@ -85,7 +89,10 @@ router.get('/details', async (req, res) => {
         INNER JOIN chats c ON c.id = wl.chat_id
         INNER JOIN users u ON u.id = wl.user_id
       WHERE 
-        u.user_id_tg = ${userId} AND c.chat_id_tg = ${chatId} AND w.age = 0
+        u.user_id_tg = ${userId} AND
+        c.chat_id_tg = ${chatId} AND
+        w.age = 0 AND
+        wl.quantity > 0
     `, { type: sequelize.QueryTypes.SELECT });
 
     const ilegals = await sequelize.query(`
@@ -97,7 +104,10 @@ router.get('/details', async (req, res) => {
         INNER JOIN chats c ON c.id = wl.chat_id
         INNER JOIN users u ON u.id = wl.user_id
       WHERE 
-        u.user_id_tg = ${userId} AND c.chat_id_tg = ${chatId} AND w.age > 0 AND w.age < 18
+        u.user_id_tg = ${userId} AND
+        c.chat_id_tg = ${chatId} AND
+        w.age > 0 AND w.age < 18 AND
+        wl.quantity > 0
     `, { type: sequelize.QueryTypes.SELECT });
 
     const legals = await sequelize.query(`
@@ -109,7 +119,10 @@ router.get('/details', async (req, res) => {
         INNER JOIN chats c ON c.id = wl.chat_id
         INNER JOIN users u ON u.id = wl.user_id
       WHERE 
-        u.user_id_tg = ${userId} AND c.chat_id_tg = ${chatId} AND w.age > 17
+        u.user_id_tg = ${userId} AND
+        c.chat_id_tg = ${chatId} AND
+        w.age > 17 AND
+        wl.quantity > 0
     `, { type: sequelize.QueryTypes.SELECT });
   
     const data = {
@@ -161,7 +174,9 @@ router.get('/favorites', async (req, res) => {
         INNER JOIN chats c ON c.id = wl.chat_id
         INNER JOIN users u ON u.id = wl.user_id
       WHERE
-        c.chat_id_tg = '${chatId}' AND u.user_id_tg = '${userId}'
+        c.chat_id_tg = '${chatId}' AND
+        u.user_id_tg = '${userId}' AND
+        wl.quantity > 0
       ORDER BY
         wfl.position ASC
       LIMIT 10 OFFSET ${page - 1};
@@ -176,7 +191,9 @@ router.get('/favorites', async (req, res) => {
         INNER JOIN chats c ON c.id = wl.chat_id
         INNER JOIN users u ON u.id = wl.user_id
       WHERE
-        c.chat_id_tg = '${chatId}' AND u.user_id_tg = '${userId}'
+        c.chat_id_tg = '${chatId}' AND
+        u.user_id_tg = '${userId}' AND
+        wl.quantity > 0
     `, { type: sequelize.QueryTypes.SELECT });
 
     console.log(totalItems);
@@ -236,7 +253,8 @@ router.put('/trade_proposition', async (req, res) => {
     const myWaifu = await sequelize.query(`
       ${query}
         wl.user_id = ${myUser.id} AND 
-        wl.chat_id = ${chat[0].id}
+        wl.chat_id = ${chat[0].id} AND
+        wl.quantity > 0
       ORDER BY f.name ASC, w.name ASC
       LIMIT 1 OFFSET ${myWaifuNumber - 1};
     `, { type: sequelize.QueryTypes.SELECT });
@@ -244,7 +262,8 @@ router.put('/trade_proposition', async (req, res) => {
     const otherWaifu = await sequelize.query(`
       ${query}
         wl.user_id = ${otherUser.id} AND 
-        wl.chat_id = ${chat[0].id}
+        wl.chat_id = ${chat[0].id} AND
+        wl.quantity > 0
       ORDER BY f.name ASC, w.name ASC
       LIMIT 1 OFFSET ${otherWaifuNumber - 1};
     `, { type: sequelize.QueryTypes.SELECT });
@@ -285,252 +304,140 @@ router.put('/update_trade', async (req, res) => {
 });
 
 router.put('/trade_answer', async (req, res) => {
-  console.log(req.body);
   const { answer, messageId, userTgId } = req.body;
   const t = await sequelize.transaction();
   try {
     const trade = await sequelize.query(`
-      SELECT
+      SELECT 
         t.id trade_id,
+        c.id chat_id,
         ue.id user_emiter_id,
-        ue.user_id_tg user_id_tg_emiter,
-        wle.id list_emiter_id,
-        wle.waifu_id waifu_emiter_id,
+        ue.user_id_tg user_emiter_tg_id,
+        wle.id waifu_emiter_list_id,
+        we.id waifu_emiter_id,
+        IF(we.nickname <> '', CONCAT(we.name, ' (', we.nickname, ')'), we.name) waifu_emiter_name,
+        IF(fe.nickname <> '', CONCAT(fe.name, ' (', fe.nickname , ')'), fe.name) franchise_emiter_name,
+        wle.quantity waifu_emiter_quantity,
+        IF(wfle.id IS NULL, 0, 1) waifu_emiter_favorite,
         ur.id user_receptor_id,
-        ur.user_id_tg user_id_tg_receptor,
-        wlr.id list_receptor_id,
-        wlr.waifu_id waifu_receptor_id,
-        weo.id waifu_emisor_origin_id,
-        wro.id waofi_receptor_origin_id,
-        wlr.chat_id
-      FROM
-        trades t
-        INNER JOIN waifu_lists wle ON wle.id = t.waifu_emiter_id
-        INNER JOIN users ue ON ue.id = wle.user_id
-        INNER JOIN waifu_lists wlr ON wlr.id = t.waifu_receptor_id
-        INNER JOIN users ur ON ur.id = wlr.user_id
-        INNER JOIN waifus weo ON weo.id = wle.waifu_id 
-        INNER JOIN waifus wro ON wro.id = wlr.waifu_id 
-      WHERE
-        t.message_id = '${messageId}'
-      LIMIT 1
-    `, { type: sequelize.QueryTypes.SELECT });
+        ur.user_id_tg user_receptor_tg_id,
+        wlr.id waifu_receptor_list_id,
+        wr.id waifu_receptor_id,
+        IF(wr.nickname <> '', CONCAT(wr.name, ' (', wr.nickname, ')'), wr.name) waifu_receptor_name,
+        IF(fr.nickname <> '', CONCAT(fr.name, ' (', fr.nickname, ')'), fr.name) franchise_receptor_name,
+        wlr.quantity waifu_receptor_quantity,
+        IF(wflr.id IS NULL, 0, 1) waifu_receptor_favorite
+      FROM 
+      trades t 
+        INNER JOIN chats c ON t.chat_id = c.id 
+        INNER JOIN waifu_lists wle ON wle.id = t.waifu_emiter_id 
+        INNER JOIN waifus we ON we.id = wle.waifu_id 
+        INNER JOIN franchises fe ON fe.id = we.franchise_id 
+        LEFT JOIN waifu_favorite_lists wfle ON wfle.waifu_list_id = wle.id 
+        INNER JOIN users ue ON ue.id = wle.user_id 
+        INNER JOIN waifu_lists wlr ON wlr.id = t.waifu_receptor_id 
+        INNER JOIN waifus wr ON wr.id = wlr.waifu_id 
+        INNER JOIN franchises fr ON fr.id = wr.franchise_id 
+        LEFT JOIN waifu_favorite_lists wflr ON wflr.waifu_list_id = wlr.id 
+        INNER JOIN users ur ON ur.id = wlr.user_id 
+      WHERE 
+        t.message_id = ${messageId} AND
+        (ue.user_id_tg = ${userTgId} OR ur.user_id_tg = ${userTgId})
+      LIMIT 1;
+    `,
+    { type: sequelize.QueryTypes.SELECT });
 
-    if (trade[0].user_id_tg_receptor != userTgId.toString()) return res.status(203).send();
+    if (!trade) return res.status(401).send('No puedes intervenir en el intercambio');
 
-    console.log("hacer lo que sigue");
     if (!answer) {
-      await sequelize.query(`DELETE FROM trades WHERE id = ${trade[0].trade_id}`, { type: sequelize.QueryTypes.DELETE });
+      await deleteTrade(trade[0].trade_id, t);
       return res.status(201).send();
-    } 
-
-    let waifusEmisor = [];
-    let waifusReceptor = [];
-
-    await waifusEmisor.push(await searhcWaifu(trade[0].user_emiter_id, trade[0].waifu_emiter_id));
-    await waifusReceptor.push(await searhcWaifu(trade[0].user_receptor_id, trade[0].waifu_receptor_id));
-    await waifusEmisor.push(await searhcWaifu(trade[0].user_emiter_id, trade[0].waifu_receptor_id));
-    await waifusReceptor.push(await searhcWaifu(trade[0].user_receptor_id, trade[0].waifu_emiter_id));
-
-    const idEmiter = trade[0].user_emiter_id;
-    const idReceptor = trade[0].user_receptor_id;
-    const chatId = trade[0].chat_id;
-    const waifuEmisorOriginId = trade[0].waifu_emisor_origin_id;
-    const waifuReceptorOriginId = trade[0].waofi_receptor_origin_id;
-
-    await sequelize.query(`DELETE FROM trades WHERE id = ${trade[0].trade_id}`, { type: sequelize.QueryTypes.DELETE });
-
-    console.log(waifusEmisor, waifusReceptor);
-    const favoriteEmisor = await verifyFavorite (waifusEmisor[0].id);
-    const favoriteReceptor = await verifyFavorite (waifusReceptor[0].id);
-    console.log("emison", idEmiter, "receptor", idReceptor, "chat", chatId);
-    if (waifusEmisor[1] == null && waifusReceptor[1] == null) { // INFO caso 1
-      console.log("Entre al caso 1");
-      if ((favoriteEmisor == null && favoriteReceptor == null) || (favoriteEmisor.quantity > 1 && favoriteReceptor == null) || (favoriteEmisor.quantity = null && favoriteReceptor > 1) || (favoriteEmisor.quantity > 1 && favoriteReceptor > 1)) {
-        const evaluation = caseProcessor(0, waifusEmisor, waifusReceptor);
-        switch (evaluation) {
-          case 1: // ambos tiene la waifu en la posicion 1 1 vez
-            await reasingWaifu(idEmiter, waifusReceptor[0].id, t);
-            await reasingWaifu(idReceptor, waifusEmisor[0].id, t);
-            break;
-          case 2: // ambos tienen mas de 1
-            await removeWaifu(waifusReceptor[0].id);
-            await removeWaifu(waifusEmisor[0].id);
-            await createWaifu(idReceptor, waifuEmisorOriginId, chatId, t);
-            await createWaifu(idEmiter, waifuReceptorOriginId, chatId, t);
-            break;
-            case 3: // el emisor tiene 1 y el receptor mas de 1
-            await reasingWaifu(idReceptor, waifusEmisor[0].id, t);
-            await removeWaifu(waifusReceptor[0].id, t);
-            await createWaifu(idEmiter, waifuReceptorOriginId, chatId, t)
-            break;
-          default: // el emisor tiene mas de 1 y el receptor solo 1
-            await reasingWaifu(idEmiter, waifusReceptor[0].id, t);
-            await removeWaifu(waifusEmisor[0].id, t);
-            await createWaifu(idReceptor, waifuEmisorOriginId, chatId, t);
-            break;
-        }
-        await t.commit();
-        return res.status(200).send({ message: 'El intercambio fue exitoso' });
-      } else {
-        await t.rollback();
-        return res.status(202).send({ message: `No se puede realizar el intercambio debido a que ${favoriteEmisor.name || favoriteReceptor.name} de ${favoriteEmisor.franchise || favoriteEmisor.franchise} esta marcada como favorita` });
-      }
-    } else if (waifusEmisor[1] != null && waifusReceptor[1] == null) { // INFO caso 2
-      console.log("entre al caso 2");
-      if ((favoriteEmisor == null && favoriteReceptor == null) || (favoriteEmisor.quantity > 1 && favoriteReceptor == null) || (favoriteEmisor.quantity = null && favoriteReceptor > 1) || (favoriteEmisor.quantity > 1 && favoriteReceptor > 1)) {
-
-        const evaluation = caseProcessor(0, waifusEmisor, waifusReceptor);
-        switch(evaluation) {
-          case 1: // ambos tienen uno solo
-            await reasingWaifu(idReceptor, waifusEmisor[0].id, t);
-            await deleteWaifu(waifusReceptor[0].id, t);
-            break;
-          case 2: // ambos tienes mas de 1
-            await removeWaifu(waifusReceptor[0].id, t);
-            await removeWaifu(waifusEmisor[0].id, t);
-            await createWaifu(idReceptor, waifuEmisorOriginId, chatId, t);
-            break;
-          case 3: // el emisor tiene 1 y el receptor mas de 1
-            await removeWaifu(waifusReceptor[0].id, t);
-            await reasingWaifu(idReceptor, waifusEmisor[0].id, t);
-            break;
-          default: // el emisor tiene mas de 1 y el receptor solo 1
-            await deleteWaifu(waifusReceptor[0].id, t);
-            await removeWaifu(waifusEmisor[0].id, t);
-            await createWaifu(idReceptor, waifuEmisorOriginId, chatId, t);
-            break;
-        }
-        await addWaifu(waifusEmisor[1].id);
-        await t.commit();
-        return res.status(200).send({ message: 'El intercambio fue exitoso' });
-      } else {
-        await t.rollback();
-        return res.status(202).send({ message: `No se puede realizar el intercambio debido a que ${favoriteEmisor.name || favoriteReceptor.name} de ${favoriteEmisor.franchise || favoriteEmisor.franchise} esta marcada como favorita` });
-      }
-    } else if (waifusEmisor[1] == null && waifusReceptor[1] != null) { // INFO caso 3
-      console.log("entre al caso 3");
-      if ((favoriteEmisor == null && favoriteReceptor == null) || (favoriteEmisor.quantity > 1 && favoriteReceptor == null) || (favoriteEmisor.quantity = null && favoriteReceptor > 1) || (favoriteEmisor.quantity > 1 && favoriteReceptor > 1)) {
-        const evaluation = caseProcessor(0, waifusEmisor, waifusReceptor);
-        switch(evaluation) { 
-          case 1: // ambos tiene la waifu en la posicion 1 1 vez
-            await deleteWaifu(waifusEmisor[0].id, t);
-            await reasingWaifu(idEmiter, waifusReceptor[0].id, t);
-            break;
-          case 2: // ambos tienes mas de 1
-            await removeWaifu(waifusEmisor[0].id, t);
-            await removeWaifu(waifusReceptor[0].id, t);
-            await createWaifu(idEmiter, waifuReceptorOriginId, chatId, t);
-            break;
-          case 3: // el emisor tiene 1 y el receptor mas de 1
-            await removeWaifu(waifusEmisor[0].id, t);
-            await reasingWaifu(idEmiter, waifusReceptor[0].id, t);
-            break;
-          default: // el emisor tiene mas de 1 y el receptor solo 1
-            await deleteWaifu(waifusEmisor[0].id, t);
-            await removeWaifu(waifusReceptor[0].id, t);
-            await createWaifu(idEmiter, waifuReceptorOriginId, chatId, t);
-            break;
-        }
-        await addWaifu(waifusReceptor[1].id);
-        await t.commit();
-        return res.status(200).send({ message: 'El intercambio fue exitoso' });
-      } else {
-        await t.rollback();
-        res.status(202).send({ message: `No se puede realizar el intercambio debido a que ${favoriteEmisor.name || favoriteReceptor.name} de ${favoriteEmisor.franchise || favoriteEmisor.franchise} esta marcada como favorita` });
-      }
-    } else { // INFO caso 4 waifusEmisor[1] != null && waifusReceptor[1] != null
-      console.log("entre al caso 4");
-      if ((favoriteEmisor == null && favoriteReceptor == null) || (favoriteEmisor.quantity > 1 && favoriteReceptor == null) || (favoriteEmisor.quantity = null && favoriteReceptor > 1) || (favoriteEmisor.quantity > 1 && favoriteReceptor > 1)) {
-        const evaluation = caseProcessor(0, waifusEmisor, waifusReceptor);
-        switch(evaluation) {
-          case 1: // ambos tiene la waifu en la posicion 1 1 vez
-            await deleteWaifu(waifusReceptor[0].id, t);
-            await deleteWaifu(waifusEmisor[0].id, t);
-            break;
-          case 2: // ambos tienes mas de 1
-            await removeWaifu(waifusReceptor[0].id, t);
-            await removeWaifu(waifusEmisor[0].id, t);
-            break;
-          case 3: // el emisor tiene 1 y el receptor mas de 1
-            await deleteWaifu(waifusEmisor[0].id, t);
-            await removeWaifu(waifusReceptor[0].id, t);
-            break
-          default: // el emisor tiene mas de 1 y el receptor solo 1
-            await deleteWaifu(waifusReceptor[0].id, t);
-            await removeWaifu(waifusEmisor[0].id, t);
-            break;
-        }
-        await addWaifu(waifusReceptor[1].id, t);
-        await addWaifu(waifusEmisor[1].id, t);
-        await t.commit();
-        return res.status(200).send({ message: 'El intercambio fue exitoso' });
-      } else {
-        await t.rollback()
-        res.status(202).send({ message: `No se puede realizar el intercambio debido a que ${favoriteEmisor.name || favoriteReceptor.name} de ${favoriteEmisor.franchise || favoriteEmisor.franchise} esta marcada como favorita` });
-      }
     }
-    await t.commit();
-    return res.status(200).send({ message: 'El intercambio fue exitoso' });
+
+    if (userTgId.toString() == trade[0].user_emiter_tg_id.toString())
+      return res.status(300).send('No tienes permiso para aceptar el intercambio ya que eres el que lo propuso');
+
+    const chatId = trade[0].chat_id;
+    const tradeId = trade[0].trade_id;
+    const emiter = {
+      id: trade[0].user_emiter_id,
+      tg_id: trade[0].user_emiter_tg_id,
+      waifu_list_id: trade[0].waifu_emiter_list_id,
+      waifu_id: trade[0].waifu_emiter_id,
+      waifu_name: trade[0].waifu_emiter_name,
+      franchice_name: trade[0].franchise_emiter_name,
+      waifu_quantity: trade[0].waifu_emiter_quantity,
+      favorite: trade[0].waifu_emiter_favorite
+    };
+    const receptor = {
+      id: trade[0].user_receptor_id,
+      tg_id: trade[0].user_receptor_tg_id,
+      waifu_list_id: trade[0].waifu_receptor_list_id,
+      waifu_id: trade[0].waifu_receptor_id,
+      waifu_name: trade[0].waifu_receptor_name,
+      franchice_name: trade[0].franchise_receptor_name,
+      waifu_quantity: trade[0].waifu_receptor_quantity,
+      favorite: trade[0].waifu_receptor_favorite
+    };
+
+    if ((emiter.favorite && emiter.waifu_quantity < 2) || (receptor.favorite && receptor.waifu_quantity < 2)) {
+      // INFO codigo 202, no se puede intercambiar debido a que uno de los 2 tiene a la waifu en favorita y la cantidad es menor a 2
+      let name = '', franchise = ''
+      if (emiter.waifu_quantity < 2) {
+        name = emiter.waifu_name;
+        franchise = emiter.franchice_name;
+      }
+      else {
+        name = receptor.waifu_name;
+        franchise = receptor.franchice_name;
+      }
+
+      await deleteTrade(tradeId, t);
+      return res.status(202).send({ message: `No se puede realizar el intercambio debido a que ${name} de ${franchise} esta marcada como favorita y no se tiene un clon para poder intercambiarla` });
+    } else {
+      await removeWaifu(emiter.waifu_list_id, t);
+
+      await removeWaifu(receptor.waifu_list_id, t);
+
+      const waifuAddEmiter = await searchWaifu(receptor.waifu_id, emiter.id, chatId);
+      const waifuAddReceptor = await searchWaifu(emiter.waifu_id, receptor.id, chatId);
+
+      if (waifuAddEmiter) await addWaifu(waifuAddEmiter.id, t);
+      else await createWaifu(emiter.id, receptor.waifu_id, chatId, t);
+
+      if (waifuAddReceptor) await addWaifu(waifuAddReceptor.id, t);
+      else await createWaifu(receptor.id, emiter.waifu_id, chatId, t);
+
+      await deleteTrade(tradeId, t);
+      return res.status(200).send({ message: 'El intercambio fue exitoso' });
+    }
+
   } catch (error) {
-    console.error(error);
+    console.log(error);
     await t.rollback();
-    return res.status(500).send(error);
+    return res.status(500).send();
   }
 });
 
-async function searhcWaifu(userId, waifu_list_id) {
-  const waifu = await sequelize.query(`
-    SELECT
-      wl.id,
-      wl.user_id,
-      wl.waifu_id,
-      wl.quantity,
-      (CASE
-        WHEN w.nickname = "" THEN w.name
-        ELSE CONCAT(w.name, ' - (', w.nickname, ')')
-      END) name,
-      (CASE
-        WHEN f.nickname = "" THEN f.name
-        ELSE CONCAT(f.name, ' - (', f.nickname, ')')
-      END) franchise
-    FROM
-      waifu_lists wl
-      INNER JOIN waifus w ON w.id = wl.waifu_id
-      INNER JOIN franchises f ON f.id = w.franchise_id
-    WHERE
-      waifu_id = ${waifu_list_id} AND user_id = ${userId}
-    LIMIT 1
-  `, { type: sequelize.QueryTypes.SELECT });
-
-  if (waifu.length > 0) return waifu[0];
-  else return null;
+async function deleteTrade(tradeId, t) {
+  await sequelize.query(`DELETE FROM trades WHERE id = ${tradeId}`, { type: sequelize.QueryTypes.DELETE , transaction: t });
+  await t.commit();
 }
 
-async function verifyFavorite (waifuListId) {
-  const favorite = await sequelize.query(`
+async function searchWaifu(waifuId, userId, chatId) {
+  const waifu = await sequelize.query(`
     SELECT
-      wfl.id,
-      (CASE
-        WHEN w.nickname = "" THEN CONCAT(w.name, ' - (', w.nickname, ')')
-        ELSE w.name
-      END) name,
-      (CASE
-        WHEN f.nickname = "" THEN CONCAT(f.name, ' - (', f.nickname, ')')
-        ELSE f.name
-      END)franchise
+      id
     FROM
-      waifu_favorite_lists wfl
-      INNER JOIN waifu_lists wl ON wfl.waifu_list_id = wl.id
-      INNER JOIN waifus w ON w.id = wl.waifu_id
-      INNER JOIN franchises f ON f.id = w.franchise_id
+      waifu_lists
     WHERE
-      wfl.waifu_list_id = ${waifuListId}
+      user_id = ${userId} AND
+      waifu_id = ${waifuId} AND
+      chat_id = ${chatId}
     LIMIT 1
   `, { type: sequelize.QueryTypes.SELECT });
-  
-  if (favorite.length > 0) return favorite[0];
-  return null;
+
+  return waifu.length > 0 ? waifu[0] : null;
 }
 
 async function addWaifu(waifuListId, t) {
@@ -570,31 +477,9 @@ async function deleteWaifu(waifuListId, t) {
   return
 }
 
-async function reasingWaifu(userId, waifuListId, t) {
-  await sequelize.query(`
-    UPDATE waifu_lists
-    SET user_id = ${userId}
-    WHERE id = ${waifuListId}
-  `,
-  {
-    type: sequelize.QueryTypes.UPDATE,
-    transaction: t
-  });
-  return;
-}
-
 async function createWaifu(userId, waifuId, chatId, t) {
   await WaifuLists.create({ user_id: userId, waifu_id: waifuId, chat_id: chatId, quantity: 1 }, { transaction: t });
   return;
-}
-
-function caseProcessor(position, waifusEmisor, waifusReceptor) {
-  let caseProcess = 0;
-  if (waifusEmisor[position].quantity == 1 && waifusReceptor[position].quantity == 1) caseProcess = 1;
-  else if (waifusEmisor[position].quantity > 1 && waifusReceptor[position].quantity > 1) caseProcess = 2;
-  else if (waifusEmisor[position].quantity == 1 && waifusReceptor[position].quantity > 1) caseProcess = 3;
-  else if (waifusEmisor[position].quantity > 1 && waifusReceptor[position].quantity == 1) caseProcess = 4;
-  return caseProcess;
 }
 
 module.exports = router;
