@@ -148,7 +148,7 @@ router.get('/details', async (req, res) => {
 });
 
 router.get('/favorites', async (req, res) => {
-  console.log("llegue a la llamada de los favoritos")
+  console.log("llegue a la llamada de los favoritos");
   const { chatId, userId, page } = req.query;
   try {
     const waifus = await sequelize.query(`
@@ -179,7 +179,7 @@ router.get('/favorites', async (req, res) => {
         wl.quantity > 0
       ORDER BY
         wfl.position ASC
-      LIMIT 10 OFFSET ${page - 1};
+      LIMIT 10 OFFSET ${(page - 1) * 10};
     `, { type: sequelize.QueryTypes.SELECT });
 
     const totalItems = await sequelize.query(`
@@ -201,10 +201,47 @@ router.get('/favorites', async (req, res) => {
     const totalPages = parseInt(totalItems[0].total / 10) + 1;
 
     console.log(waifus);
-    if (waifus.length > 0) return res.status(200).send({ waifus, totalPages, actualPage: page });
+    if (waifus.length > 0) return res.status(200).json({ waifus, totalPages, actualPage: page });
     return res.status(201).send({ message: 'Parece que todavia no has agregado ninguna waifu a esta lista, lo puedes hacer por el comando /addfavorite <numero en tu lista> <posición>' });
   } catch (error) {
     console.error(error)
+    return res.status(500).send();
+  }
+});
+
+router.get('/favorites_details', async (req, res) => {
+  const { chatId, userId } = req.query;
+  try {
+    const result = await sequelize.query(`
+      SELECT 
+        SUM(IF(w.age > 17, 1, 0)) legals,
+        SUM(IF(w.age > 0 AND w.age < 18, 1, 0)) ilegals,
+        SUM(IF(w.age = 0, 1, 0))indefinides
+      FROM 
+        waifu_favorite_lists wfl 
+        INNER JOIN waifu_lists wl ON wfl.waifu_list_id = wl.id 
+        INNER JOIN waifus w ON w.id = wl.waifu_id 
+        INNER JOIN users u ON u.id =wl.user_id 
+        INNER JOIN chats c ON c.id = wl.chat_id 
+      WHERE 
+        u.user_id_tg = '${userId}' AND 
+        c.chat_id_tg = '${chatId}'
+      LIMIT 1
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    const { legals, ilegals, indefinides } = result[0];
+    let message = `Legales: ${legals}\nIlegales: ${ilegals}\nIndefinidas: ${indefinides}\n`;
+    if (legals > ilegals && legals > indefinides) 
+      message += '\nNo estas en problemas, lo que más te gustan son legales 👍';
+    else if (ilegals > legals && ilegals > indefinides)
+      message += '\nAmigo, sera mejor que vivas bien escondido, la 🇺🇳 te anda buscando';
+    else if (indefinides > ilegals && indefinides > legals)
+      message += '\nNo estas en problemas pero... no sabia que te gustabas la mayores';
+    else 
+      message += '\nTus guston son algo extraños, no se como calificarte';
+    return res.status(200).send({ message });
+  } catch (error) {
+    console.error(error);
     return res.status(500).send();
   }
 });
