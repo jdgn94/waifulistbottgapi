@@ -231,14 +231,15 @@ router.get('/favorites_details', async (req, res) => {
 
     const { legals, ilegals, indefinides } = result[0];
     let message = `Legales: ${legals}\nIlegales: ${ilegals}\nIndefinidas: ${indefinides}\n`;
-    if (legals > ilegals && legals > indefinides) 
+    if (legals > ilegals && legals > indefinides) {
       message += '\nNo estas en problemas, lo que más te gustan son legales 👍';
-    else if (ilegals > legals && ilegals > indefinides)
+    } else if (ilegals > legals && ilegals > indefinides) {
       message += '\nAmigo, sera mejor que vivas bien escondido, la 🇺🇳 te anda buscando';
-    else if (indefinides > ilegals && indefinides > legals)
+    } else if (indefinides > ilegals && indefinides > legals) {
       message += '\nNo estas en problemas pero... no sabia que te gustabas la mayores';
-    else 
+    } else {
       message += '\nTus guston son algo extraños, no se como calificarte';
+    } 
     return res.status(200).send({ message });
   } catch (error) {
     console.error(error);
