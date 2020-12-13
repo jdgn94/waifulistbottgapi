@@ -280,8 +280,8 @@ router.post('/change_favorite', async (req, res) => {
     const waifu = await sequelize.query(`
       SELECT
         wl.id,
-        IF(w.nickname = '', w.name, CONCAT(w.name, ' (' w.nickname, ')')) name,
-        IF(f.nickname = '', f.name, CONCAT(f.name, ' (' f.nickname, ')')) franchise
+        IF(w.nickname = '', w.name, CONCAT(w.name, ' (', w.nickname, ')')) name,
+        IF(f.nickname = '', f.name, CONCAT(f.name, ' (', f.nickname, ')')) franchise
       FROM
         waifu_lists wl
         INNER JOIN waifus w ON w.id = wl.waifu_id
