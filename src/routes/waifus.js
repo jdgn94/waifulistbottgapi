@@ -279,7 +279,9 @@ router.post('/change_favorite', async (req, res) => {
   try {
     const waifu = await sequelize.query(`
       SELECT
-        wl.id
+        wl.id,
+        IF(w.nickname = '', w.name, CONCAT(w.name, ' (' w.nickname, ')')) name,
+        IF(f.nickname = '', f.name, CONCAT(f.name, ' (' f.nickname, ')')) franchise
       FROM
         waifu_lists wl
         INNER JOIN waifus w ON w.id = wl.waifu_id
@@ -379,7 +381,8 @@ router.post('/change_favorite', async (req, res) => {
       }
     });
 
-    return res.status(200).send({ message: 'Se ha actualizado tu lista de favoritos' });
+    const waifuName = `${waifu[0].name} de la franquicia ${waifu[0].nickname}`
+    return res.status(200).send({ message: `Se ha agregado a ${waifuName} a tú lista de favoritos` });
   } catch (error) {
     console.error(error);
     return res.status(500).send(error);

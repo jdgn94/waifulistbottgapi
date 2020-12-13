@@ -2,6 +2,9 @@ const express = require('express');
 const db = require('../models');
 const Trades = require('../models').trade;
 const WaifuLists = require('../models').waifu_list;
+const Chats = require('../models').chat;
+const Users = require('../models').user;
+const WaifuFavoriteLists = require('../models').waifu_favorite_list;
 
 const router = express.Router();
 const sequelize = db.sequelize;
@@ -246,6 +249,62 @@ router.get('/favorites_details', async (req, res) => {
     return res.status(500).send();
   }
 });
+
+router.put('/deleted_favorite', async (req, res) => {
+  const { position, userIdTg, chatIdTg } = req.body;
+  const t = await sequelize.transaction();
+  try {
+    const chat = await Chats.findOne({ where: { chat_id_tg: chatIdTg }});
+    const user = await Users.findOne({ where: { user_id_tg: userIdTg }});
+    const waifuToDelete = await sequelize.query(`
+      SELECT
+        wfl.id,
+        IF(w.nickname = '', w.name, CONCAT(w.name, ' (', w.nickname, ')')) name,
+        IF(f.nickname = '', f.name, CONCAT(f.name, ' (', f.nickname, ')')) franchise
+      FROM
+        waifu_favorite_lists wfl
+        INNER JOIN waifu_lists wl ON wfl.waifu_list_id = wl.id
+        INNER JOIN waifus w ON w.id = wl.waifu_id
+        INNER JOIN franchises f ON f.id = w.franchise_id
+      WHERE
+        wfl.position = ${position} AND 
+        wl.user_id = ${chat.id} AND 
+        wl.chat_id = ${user.id}
+      LIMIT 1
+    `, { type: sequelize.QueryTypes.SELECT });
+    
+    if (waifuToDelete.length < 1) return res.status(200).send({ message: 'No tienes una waifu en esa posicion' });
+    await WaifuFavoriteLists.destroy({ where: { id: waifuToDelete[0].id }}, { transaction: t });
+    const allWaifus = await sequelize.query(`
+      SELECT
+        wfl.id,
+        wfl.position
+      FROM
+        waifu_favorite_lists wfl
+        INNER JOIN waifu_lists wl ON wfl.waifu_list_id = wl.id
+      WHERE
+      wl.user_id = ${chat.id} AND 
+      wl.chat_id = ${user.id}
+      ORDER BY wfl.position
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    const newPositionAllWaifus = await reasingPos(allWaifus);
+    console.log('-------------------------------------------');
+    console.log('-------------------------------------------');
+    console.log("id de waifus con sus nuevas posiciones", newPositionAllWaifus);
+    console.log('-------------------------------------------');
+    console.log('-------------------------------------------');
+    await WaifuFavoriteLists.bulkCreate(newPositionAllWaifus, { transaction: t, updateOnDuplicate: ['position'] });
+    
+    await t.commit();
+    const waifuName = `${waifuToDelete[0].name} de la franquicia ${waifuToDelete[0].franchise}`;
+    return res.status(200).send({ message: `Se ha eliminado de la lista de favoritos a ${waifuName}`})
+  } catch (error) {
+    console.error(error);
+    await t.rollback()
+    return res.status(500).send('')
+  }
+})
 
 router.put('/trade_proposition', async (req, res) => {
   console.log(req.body);
@@ -518,6 +577,17 @@ async function deleteWaifu(waifuListId, t) {
 async function createWaifu(userId, waifuId, chatId, t) {
   await WaifuLists.create({ user_id: userId, waifu_id: waifuId, chat_id: chatId, quantity: 1 }, { transaction: t });
   return;
+}
+
+async function reasingPos(allWaifus) {
+  let newPositionAllWaifus = [] ;
+
+  const length = allWaifus.length;
+  for (let index = 0; index < length; index++) {
+    await newPositionAllWaifus.push({ id: allWaifus[index].id, position: index + 1 })
+  }
+
+  return newPositionAllWaifus;
 }
 
 module.exports = router;
