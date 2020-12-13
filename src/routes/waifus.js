@@ -381,7 +381,7 @@ router.post('/change_favorite', async (req, res) => {
       }
     });
 
-    const waifuName = `${waifu[0].name} de la franquicia ${waifu[0].nickname}`
+    const waifuName = `${waifu[0].name} de la franquicia ${waifu[0].franchise}`
     return res.status(200).send({ message: `Se ha agregado a ${waifuName} a tú lista de favoritos` });
   } catch (error) {
     console.error(error);
