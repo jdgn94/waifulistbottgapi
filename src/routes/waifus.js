@@ -5,11 +5,11 @@ const User = require('../models').user;
 const UserInfo = require('../models').user_info;
 const WaifuList = require('../models').waifu_list;
 const UserInfos = require('../models').user_info;
+const utilUserInfo = require('../utils/userInfo');
 const db = require('../models');
 const fs = require('fs-extra');
 const cloudinary = require('cloudinary');
 const express = require('express');
-const utilUserInfo = require('../utils/userInfo');
 
 const router = express.Router();
 const sequelize = db.sequelize;
@@ -20,9 +20,10 @@ cloudinary.config({
 })
 
 router.get('/', async (req, res) => {
-  let { name, page } = req.query;
+  let { name, page, franchise_id, id, limit } = req.query;
   if (!name) name = ''
   if (!page) page = 1;
+  if (!limit) limit = true;
   try {
     const waifus = await sequelize.query(`
       SELECT
@@ -40,15 +41,17 @@ router.get('/', async (req, res) => {
         INNER JOIN waifu_types AS wt ON wt.id = w.waifu_type_id 
         INNER JOIN franchises AS f ON f.id = w.franchise_id 
       WHERE
-        LOWER(w.name) LIKE '%${name.toLowerCase()}%' OR
+        ${ id > 0 ? 'w.id = ' + id + ' AND' : '' }
+        ${ franchise_id > 0 ? 'f.id = ' + franchise_id + ' AND' : '' }
+        (LOWER(w.name) LIKE '%${name.toLowerCase()}%' OR
         LOWER(w.nickname) LIKE '%${name.toLowerCase()}%' OR
         LOWER(w.age) LIKE '%${name.toLowerCase()}%' OR
         LOWER(wt.name) LIKE '%${name.toLowerCase()}%' OR
         LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
-        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%'
+        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%')
       ORDER BY
         f.name ASC, w.name ASC
-      LIMIT 20 OFFSET ${(page - 1) * 20}
+        ${limit ? 'LIMIT 20 OFFSET ' + ((page - 1) * 20) : '' }
     `,
     { type: sequelize.QueryTypes.SELECT });
     
@@ -59,12 +62,14 @@ router.get('/', async (req, res) => {
         INNER JOIN waifu_types AS wt ON wt.id = w.waifu_type_id 
         INNER JOIN franchises AS f ON f.id = w.franchise_id 
       WHERE
-        LOWER(w.name) LIKE '%${name.toLowerCase()}%' OR
+        ${ id > 0 ? 'w.id = ' + id  + ' AND': '' }
+        ${franchise_id > 0 ? 'f.id = ' + franchise_id + ' AND' : '' }
+        (LOWER(w.name) LIKE '%${name.toLowerCase()}%' OR
         LOWER(w.nickname) LIKE '%${name.toLowerCase()}%' OR
         LOWER(w.age) LIKE '%${name.toLowerCase()}%' OR
         LOWER(wt.name) LIKE '%${name.toLowerCase()}%' OR
         LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
-        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%'
+        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%')
     `, { type: sequelize.QueryTypes.SELECT });
 
     const totalPages = Math.ceil(totalItems[0].total_items / 20);
@@ -283,7 +288,8 @@ router.post('/change_favorite', async (req, res) => {
         INNER JOIN users u ON u.id = wl.user_id
       WHERE
         u.user_id_tg = '${userId}' AND
-        c.chat_id_tg = '${chatId}'
+        c.chat_id_tg = '${chatId}' AND
+        wl.quantity > 0
       ORDER BY f.name ASC, w.name ASC
       LIMIT 1 OFFSET ${waifuNumber - 1}
     `, { type: sequelize.QueryTypes.SELECT });
@@ -302,7 +308,8 @@ router.post('/change_favorite', async (req, res) => {
         INNER JOIN users u ON u.id = wl.user_id
       WHERE
         c.chat_id_tg = ${chatId} AND
-        u.user_id_tg = ${userId}
+        u.user_id_tg = ${userId} AND
+        wl.quantity > 0
       ORDER BY wfl.position ASC 
     `, { type: sequelize.QueryTypes.SELECT });
 
