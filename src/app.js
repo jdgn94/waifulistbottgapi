@@ -12,6 +12,7 @@ const waifuTypes = require('./routes/waifu_type');
 const chats = require('./routes/chats');
 const waifuLists = require('./routes/waifu_list');
 const user = require('./routes/user');
+const specialImage = require('./routes/special_image');
 
 // initialization
 const app = express();
@@ -43,5 +44,6 @@ app.use(baseURL + '/waifu_types', waifuTypes);
 app.use(baseURL + '/chats', chats);
 app.use(baseURL + '/waifu_list', waifuLists);
 app.use(baseURL + '/user', user);
+app.use(baseURL + '/special_image', specialImage);
 
 module.exports = app;

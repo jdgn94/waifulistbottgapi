@@ -7,7 +7,7 @@ const sequelize = db.sequelize;
 const router = express.Router();
 
 router.get('/', async (req, res) => {
-  let { name, page } = req.query;
+  let { name, page, id } = req.query;
   if (!name) name = '';
   if (!page) page = 1;
   try {
@@ -19,6 +19,7 @@ router.get('/', async (req, res) => {
       FROM
         franchises f
       WHERE
+        ${ id > 0 ? 'id = ' + id + ' AND' : '' }
         LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
         LOWER(f.nickname) LIKE '%${name.toLowerCase()}%'
       LIMIT 20 OFFSET ${(page - 1) * 20}
@@ -30,8 +31,9 @@ router.get('/', async (req, res) => {
       FROM
         franchises f
       WHERE
-        LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
-        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%'
+        ${ id > 0 ? 'id = ' + id + ' AND' : '' }
+        (LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%')
     `, { type: sequelize.QueryTypes.SELECT });
 
     const totalPages = Math.ceil(totalItems[0].total_items / 20);
