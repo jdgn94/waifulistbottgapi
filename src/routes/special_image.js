@@ -2,6 +2,10 @@ const express = require('express');
 const { sequelize } = require('../models');
 const SpecialImage = require('../models').special_image;
 const SpecialImageRelation = require('../models').special_image_relation;
+const WaifuList = require('../models').waifu_list;
+const UserSpecialList = require('../models').user_special_list;
+const User = require('../models').user;
+const Chat = require('../models').chat;
 const fs = require('fs-extra');
 const cloudinary = require('cloudinary');
 
@@ -44,6 +48,51 @@ router.get('/', async (req, res) => {
 
   const totalPage = Math.ceil(specials[0].total / 20);
   return res.status(200).send({ specials: specialsList, totalPage });
+});
+
+router.get('/list', async (req, res) => {
+  const { chatId, userId, page = 1 } = req.query;
+
+  try {
+    const user = await User.findOne({ where: { user_id_tg: userId } });
+    const chat = await Chat.findOne({ where: { chat_id_tg: chatId } });
+    console.log(user, chat);
+
+    const list = await sequelize.query(`
+      SELECT 
+        si.image_url, 
+        si.public_id
+      FROM 
+        user_special_lists usl 
+        INNER JOIN special_images si ON si.id = usl.special_images_id 
+      WHERE 
+        usl.user_id = ${user.id} AND
+        usl.chat_id = ${chat.id}
+      LIMIT 10 OFFSET ${ (page - 1) * 10 }
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    const total = await sequelize.query(`
+      SELECT 
+        COUNT(*) size
+      FROM 
+        user_special_lists
+      WHERE 
+        user_id = ${user.id} AND
+        chat_id = ${chat.id}
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    if (list.length === 0) return res.status(204).send();
+
+    const data = {
+      list,
+      actualPage: page,
+      totalPages: Math.ceil(total[0].size / 10)
+    };
+    return res.status(200).json(data)
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send(error);
+  }
 });
 
 router.get('/:id', async (req, res) => {
@@ -141,7 +190,46 @@ router.post('/edit', async (req, res) => {
   }
 });
 
-router.post('/addSpecial', async (req, res) =>  {});
+router.post('/add_special', async (req, res) =>  {
+  const { userId, chatId, waifuId } = req.body;
+  const t = await sequelize.transaction();
+  let addList = false;
+
+  try {
+    const waifuInSpecial = await SpecialImageRelation.findAll({ where: { waifu_id: waifuId } });
+    if (!waifuInSpecial) return res.status(204).send();
+
+    console.log("datos de la waifu en el especial", waifuInSpecial);
+
+    for (let i = 0; i < waifuInSpecial.length; i++) {
+      const specialId = waifuInSpecial[i].special_image_id;
+      const specialAllWaifus = await SpecialImageRelation.findAll({ where: { special_image_id: specialId } });
+      // console.log("estas son las waifus especiales", specialAllWaifus);
+      let specialAllWaifusIds = [];
+      for (let i = 0; i < specialAllWaifus.length; i++) {
+        await specialAllWaifusIds.push(specialAllWaifus[i].waifu_id);
+      }
+      console.log(specialAllWaifusIds);
+  
+      const waifusUser = await WaifuList.findAll({ where : { waifu_id: specialAllWaifusIds } });
+      console.log(waifusUser);
+      
+      // throw 'hola vale'
+      if (specialAllWaifusIds.length === waifusUser.length) {
+        await UserSpecialList.create({ user_id: userId, chat_id: chatId, special_images_id: specialId }, { transaction: t });
+        addList = true;
+      }
+    }
+
+    await t.commit();
+    if (addList) return res.status(200).send('se ha agregado una nueva imagen a tu listado especial');
+    return res.status(204).send();
+  } catch (error) {
+    await t.rollback();
+    console.error(error);
+    return res.status(500).send(error);
+  }
+});
 
 async function uploadPhoto(path) {
   const result = await cloudinary.v2.uploader.upload(

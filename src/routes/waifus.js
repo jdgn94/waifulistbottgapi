@@ -196,6 +196,12 @@ router.post('/protecc', async (req, res) => {
 
     let messageResponse = '';
     let aditionalMessage = '';
+    const extras = {
+      userId: '',
+      chatId: '',
+      waifuId: waifu.id,
+      newWaifu: false,
+    }
 
     if (match) {
       let user = await User.findOne({ where: { user_id_tg: message.from.id } });
@@ -203,9 +209,9 @@ router.post('/protecc', async (req, res) => {
       let userInfo = await UserInfo.findOne({ where: { user_id: user.id, chat_id: chat.id } });
       console.log("datos del usuario en el mensaje", message.from);
       if (!user) {
-        user = await User.create({ user_id_tg: message.from.id, nickname: `${message.from.first_name}` });
+        user = await User.create({ user_id_tg: message.from.id, nickname: `${message.from.username || message.from.first_name}` });
       } else {
-        await sequelize.query(`UPDATE users SET nickname = '${message.from.first_name}' WHERE id = ${user.dataValues.id}`, { type: sequelize.QueryTypes.UPDATE });
+        await sequelize.query(`UPDATE users SET nickname = '${message.from.username || message.from.first_name}' WHERE id = ${user.dataValues.id}`, { type: sequelize.QueryTypes.UPDATE });
       }
 
       const waifuInList = await WaifuList.findOne({ where: { user_id: user.dataValues.id, chat_id: chat.dataValues.id, waifu_id: waifu.id } });
@@ -231,6 +237,9 @@ router.post('/protecc', async (req, res) => {
       await sequelize.query(`DELETE FROM actives WHERE id = ${waifu.active_id}`, { type: sequelize.QueryTypes.DELETE });
 
       messageResponse = `Has agregado a ${waifu.name}${waifu.nickname.length > 0 ? ' (' + waifu.nickname + ')': ''} de la serie ${waifu.franchise_name}${waifu.franchise_nickname.length > 0 ? ' (' + waifu.franchise_nickname + ')' : ''}, ahora aparecera en tu lista`;
+      extras.userId = user.id;
+      extras.chatId = chat.id;
+      extras.newWaifu = true;
 
       switch(waifu.type){
         case 1:
@@ -267,7 +276,7 @@ router.post('/protecc', async (req, res) => {
       }
     }
     messageResponse += '\n' + aditionalMessage;
-    return res.status(200).send({ message: messageResponse });
+    return res.status(200).json({ message: messageResponse, extras });
   } catch (error) {
     console.error(error);
     return res.status(500).send(error);

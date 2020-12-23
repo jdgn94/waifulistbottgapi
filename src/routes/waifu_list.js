@@ -5,6 +5,7 @@ const WaifuLists = require('../models').waifu_list;
 const Chats = require('../models').chat;
 const Users = require('../models').user;
 const WaifuFavoriteLists = require('../models').waifu_favorite_list;
+const Trade = require('../models').trade;
 
 const router = express.Router();
 const sequelize = db.sequelize;
@@ -247,6 +248,45 @@ router.get('/favorites_details', async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).send();
+  }
+});
+
+router.get('/trade_info', async (req, res) => {
+  const { messageId } = req.query;
+  try {
+    const messageInfo = await sequelize.query(`
+      SELECT 
+        t.chat_id chat_id,
+        ue.id user_emiter_id,
+        ue.nickname user_emiter_name,
+        wle.waifu_id waifu_emiter_id,
+        ur.id user_receptor_id,
+        wlr.waifu_id waifu_receptor_id,
+        ur.nickname user_receptor_name
+      FROM 
+        trades t 
+        INNER JOIN waifu_lists wle ON t.waifu_emiter_id = wle.id
+        INNER JOIN users ue ON ue.id = wle.user_id 
+        INNER JOIN waifu_lists wlr ON t.waifu_receptor_id = wlr.id 
+        INNER JOIN users ur ON ur.id = wlr.user_id 
+      WHERE
+        t.message_id = ${messageId}
+      LIMIT 1
+    `, { type: sequelize.QueryTypes.SELECT });
+    
+    const data = {
+      chatId: messageInfo[0].chat_id,
+      user_emiter_id: messageInfo[0].user_emiter_id,
+      user_emiter_name: messageInfo[0].user_emiter_name,
+      waifu_emiter_id: messageInfo[0].waifu_emiter_id,
+      user_receptor_id: messageInfo[0].user_receptor_id,
+      user_receptor_name: messageInfo[0].user_receptor_name,
+      waifu_receptor_id: messageInfo[0].waifu_receptor_id
+    }
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send()
   }
 });
 
