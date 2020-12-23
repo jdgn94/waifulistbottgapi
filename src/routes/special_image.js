@@ -120,11 +120,12 @@ router.post('/edit', async (req, res) => {
     }
 
     if (image) {
-      const defaultImage = await uploadPhoto(image[0].path);
+      const newImage = await uploadPhoto(image[0].path);
+      await cloudinary.v2.uploader.destroy(specialData.public_id);
       await SpecialImage.update(
         { 
-          public_id: defaultImage.public_id,
-          image_url: defaultImage. secure_url
+          public_id: newImage.public_id,
+          image_url: newImage. secure_url
         }, 
         { where: { id: specialId } },
         { transaction: t }
