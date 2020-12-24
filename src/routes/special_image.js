@@ -12,9 +12,8 @@ const cloudinary = require('cloudinary');
 const router = express.Router();
 
 router.get('/', async (req, res) => {
-  let { name, page } = req.params;
-  if (!name) name = '';
-  if (!page) page = 1;
+  const { name = '', page = 1 } = req.query;
+  console.log(name, page);
 
   const specialsList = await sequelize.query(`
     SELECT
@@ -43,7 +42,6 @@ router.get('/', async (req, res) => {
     WHERE
       f.name LIKE "%${name}%" OR
       f.nickname LIKE "%${name}%"
-    GROUP BY si.id
   `, { type: sequelize.QueryTypes.SELECT });
 
   const totalPage = Math.ceil(specials[0].total / 20);

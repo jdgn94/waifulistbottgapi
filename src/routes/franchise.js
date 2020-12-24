@@ -7,9 +7,7 @@ const sequelize = db.sequelize;
 const router = express.Router();
 
 router.get('/', async (req, res) => {
-  let { name, page, id } = req.query;
-  if (!name) name = '';
-  if (!page) page = 1;
+  const { name = '', page = 1, id = 0 } = req.query;
   try {
     const franchises = await sequelize.query(`
       SELECT
@@ -20,8 +18,8 @@ router.get('/', async (req, res) => {
         franchises f
       WHERE
         ${ id > 0 ? 'id = ' + id + ' AND' : '' }
-        LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
-        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%'
+        (LOWER(f.name) LIKE '%${name.toLowerCase()}%' OR
+        LOWER(f.nickname) LIKE '%${name.toLowerCase()}%')
       LIMIT 20 OFFSET ${(page - 1) * 20}
     `, { type: sequelize.QueryTypes.SELECT });
 
