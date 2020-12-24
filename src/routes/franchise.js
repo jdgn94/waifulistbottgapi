@@ -41,6 +41,86 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/list', async (req, res) => {
+  const { franchise_number = 0, page = 1 } = req.query;
+
+  try {
+    if (franchise_number == 0) {
+      const franchiseList = await sequelize.query(`
+        SELECT 
+          f.id,
+          IF(f.nickname = '', f.name, CONCAT(f.name, ' (', f.nickname, ')')) name,
+          COUNT(w.id) quantity
+        FROM 
+          franchises f 
+          INNER JOIN waifus w ON f.id = w.franchise_id 
+        GROUP BY f.id
+        ORDER BY f.name
+        LIMIT 20 OFFSET ${ (page - 1) * 20 }
+      `, { type: sequelize.QueryTypes.SELECT });
+
+      const size = await sequelize.query(`
+        SELECT 
+          COUNT(DISTINCT f.id) total
+        FROM 
+          franchises f 
+          INNER JOIN waifus w ON w.franchise_id = f.id
+      `, { type: sequelize.QueryTypes.SELECT });
+
+      const data = {
+        list: franchiseList,
+        page,
+        totalPage: Math.ceil(size[0].total / 20)
+      };
+
+      return res.status(200).json(data)
+    } else {
+      const franchise = await sequelize.query(`
+        SELECT 
+          f.id,
+          IF(f.nickname = '', f.name, CONCAT(f.name, ' (', f.nickname, ')')) name,
+          COUNT(w.id) quantity
+        FROM 
+          franchises f 
+          INNER JOIN waifus w ON f.id = w.franchise_id 
+        GROUP BY f.id
+        ORDER BY f.name
+        LIMIT 1 OFFSET ${franchise_number - 1}
+      `, { type: sequelize.QueryTypes.SELECT });
+
+      console.log(franchise[0]);
+
+      const waifus = await sequelize.query(`
+        SELECT
+          IF(nickname = '', name, CONCAT(name, ' (', nickname, ')')) name
+        FROM waifus
+        WHERE franchise_id = ${franchise[0].id}
+        ORDER BY name
+        LIMIT 20 OFFSET ${ (page - 1) * 20 }
+      `, { type: sequelize.QueryTypes.SELECT });
+
+      const size = await sequelize.query(`
+        SELECT
+          COUNT(DISTINCT id) total
+        FROM waifus
+        WHERE franchise_id = ${franchise[0].id}
+      `, { type: sequelize.QueryTypes.SELECT });
+
+      const data = {
+        franchise: franchise[0],
+        list: waifus,
+        page,
+        totalPage: Math.ceil(size[0].total / 20)
+      };
+
+      return res.status(200).json(data)
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send(error);
+  }
+});
+
 router.post('/create', async (req, res) => {
   const { name, nickname } = req.body;
   try {
