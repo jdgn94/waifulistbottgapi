@@ -79,7 +79,7 @@ router.get('/list', async (req, res) => {
         chat_id = ${chat.id}
     `, { type: sequelize.QueryTypes.SELECT });
 
-    if (list.length === 0) return res.status(204).send();
+    if (list.length === 0) return res.status(205).send();
 
     const data = {
       list,
@@ -195,7 +195,7 @@ router.post('/add_special', async (req, res) =>  {
 
   try {
     const waifuInSpecial = await SpecialImageRelation.findAll({ where: { waifu_id: waifuId } });
-    if (!waifuInSpecial) return res.status(204).send();
+    if (!waifuInSpecial) return res.status(205).send();
 
     console.log("datos de la waifu en el especial", waifuInSpecial);
 
@@ -209,7 +209,7 @@ router.post('/add_special', async (req, res) =>  {
       }
       console.log(specialAllWaifusIds);
   
-      const waifusUser = await WaifuList.findAll({ where : { waifu_id: specialAllWaifusIds } });
+      const waifusUser = await WaifuList.findAll({ where : { waifu_id: specialAllWaifusIds, user_id: userId, chat_id: chatId } });
       console.log(waifusUser);
       
       // throw 'hola vale'
@@ -221,7 +221,7 @@ router.post('/add_special', async (req, res) =>  {
 
     await t.commit();
     if (addList) return res.status(200).send('se ha agregado una nueva imagen a tu listado especial');
-    return res.status(204).send();
+    return res.status(205).send();
   } catch (error) {
     await t.rollback();
     console.error(error);

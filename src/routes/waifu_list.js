@@ -572,7 +572,7 @@ router.post('/add_list', async (req, res) => {
       profile
     };
     if (franchiseNumber > 0) {
-      if (profile.points < 10) return res.status(204).send('No posees suficientes puntos para obtener una waifu');
+      if (profile.points < 10) return res.status(205).send('No posees suficientes puntos para obtener una waifu');
       
       const franchise = await sequelize.query(`
         SELECT 
@@ -586,10 +586,10 @@ router.post('/add_list', async (req, res) => {
         ORDER BY f.name
         LIMIT 1 OFFSET ${franchiseNumber - 1}
       `, { type: sequelize.QueryTypes.SELECT });
-      if (franchise.length == 0) return res.status(204).send('No se encontro la franquicia')
+      if (franchise.length == 0) return res.status(205).send('No se encontro la franquicia')
 
       if (waifuNumber > 0) {
-        if (profile.points < 20) return res.status(204).send();
+        if (profile.points < 20) return res.status(205).send();
 
         const waifu = await sequelize.query(`
           SELECT 
@@ -601,7 +601,7 @@ router.post('/add_list', async (req, res) => {
           LIMIT 1 OFFSET ${waifuNumber - 1}
         `, { type: sequelize.QueryTypes.SELECT });
 
-        if (waifu.length == 0) return res.status(204).send('No se encontro la waifu');
+        if (waifu.length == 0) return res.status(205).send('No se encontro la waifu');
 
         data.franchise = franchise[0]; 
         data.waifu = waifu[0];
@@ -615,7 +615,7 @@ router.post('/add_list', async (req, res) => {
           WHERE franchise_id = ${franchise[0].id}
         `, { type: sequelize.QueryTypes.SELECT });
 
-        const index = await Math.round(Math.random() * (0 - waifus.length - 1) + waifus.length - 1);
+        const index = await Math.round(Math.random() * (0 - (waifus.length - 1)) + waifus.length - 1);
         const waifu = waifus[index];
         
         data.franchise = franchise[0]; 
@@ -623,7 +623,7 @@ router.post('/add_list', async (req, res) => {
         data.cost = 10;
       }
     } else {
-      if (profile.points < 5) return res.status(204),send();
+      if (profile.points < 5) return res.status(205),send();
 
       const waifusQuantities = await sequelize.query(`SELECT COUNT(*) total FROM waifus`, { type: sequelize.QueryTypes.SELECT });
       const waifuId = Math.round(Math.random() * (1 - waifusQuantities[0].total) + waifusQuantities[0].total);
@@ -669,6 +669,55 @@ async function deleteTrade(tradeId, t) {
   await sequelize.query(`DELETE FROM trades WHERE id = ${tradeId}`, { type: sequelize.QueryTypes.DELETE , transaction: t });
   await t.commit();
 }
+
+router.post('/delete_list', async (req, res) => {
+  const { userId, chatId, waifuNumber = 0, quantity = 0 } = req.body;
+  const t = await sequelize.transaction();
+
+  try {
+    if (waifuNumber == 0) return res.status(205).send('Debes enviar un número indicando el la waifu en tu listado');
+    const user = await Users.findOne({ where: { user_id_tg: userId } });
+    const chat = await Chats.findOne({ where: { chat_id_tg: chatId } });
+    const profile = await Profiles.findOne({ where: { user_id: user.id, chat_id: chat.id } });
+
+    const waifu = await sequelize.query(`
+      SELECT 
+        wl.id,
+        IF(w.nickname = '', w.name, CONCAT(w.name, ' (', w.nickname, ')')) name,
+        IF(f.nickname = '', f.name, CONCAT(f.name, ' (', f.nickname, ')')) franchise,
+        wl.quantity 
+      FROM 
+        waifu_lists wl
+        INNER JOIN waifus w ON w.id = wl.waifu_id 
+        INNER JOIN franchises f ON f.id = w.franchise_id 
+      WHERE
+        user_id = ${user.id} AND
+        chat_id = ${chat.id}
+      ORDER BY f.name, w.name
+      LIMIT 1 OFFSET ${waifuNumber - 1}
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    if (waifu[0].quantity <= 1) return res.status(205).send(`Debes tener a ${waifu[0].name} de ${waifu[0].franchise} más de 1 vez para porder cambiarla por puntos`);
+
+    const quantityDelete = quantity >= waifu[0].quantity ? waifu[0].quantity - 1 : quantity == 0 ? 1 : quantity;
+    
+    await sequelize.query(`UPDATE user_infos SET points = points + ${quantityDelete} WHERE id = ${profile.id}`, { transaction: t });
+    await sequelize.query(`UPDATE waifu_lists SET quantity = quantity - ${quantityDelete} WHERE id = ${waifu[0].id}`, { transaction: t });
+
+    const data = {
+      profile,
+      waifu: waifu[0],
+      points: quantityDelete
+    }
+
+    await t.commit();
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    t.rollback();
+    return res.status(500).send();
+  }
+});
 
 async function searchWaifu(waifuId, userId, chatId) {
   const waifu = await sequelize.query(`
