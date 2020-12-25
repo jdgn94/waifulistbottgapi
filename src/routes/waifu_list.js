@@ -615,7 +615,7 @@ router.post('/add_list', async (req, res) => {
           WHERE franchise_id = ${franchise[0].id}
         `, { type: sequelize.QueryTypes.SELECT });
 
-        const index = await Math.round(Math.random() * (1 - waifus.length) + waifus.length);
+        const index = await Math.round(Math.random() * (0 - waifus.length - 1) + waifus.length - 1);
         const waifu = waifus[index];
         
         data.franchise = franchise[0]; 
