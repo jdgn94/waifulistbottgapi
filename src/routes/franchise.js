@@ -88,8 +88,6 @@ router.get('/list', async (req, res) => {
         LIMIT 1 OFFSET ${franchise_number - 1}
       `, { type: sequelize.QueryTypes.SELECT });
 
-      console.log(franchise[0]);
-
       const waifus = await sequelize.query(`
         SELECT
           IF(nickname = '', name, CONCAT(name, ' (', nickname, ')')) name

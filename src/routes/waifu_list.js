@@ -4,6 +4,9 @@ const Trades = require('../models').trade;
 const WaifuLists = require('../models').waifu_list;
 const Chats = require('../models').chat;
 const Users = require('../models').user;
+const Profiles = require('../models').user_info;
+const Waifus = require('../models').waifu;
+const Franchises = require('../models').franchise;
 const WaifuFavoriteLists = require('../models').waifu_favorite_list;
 const Trade = require('../models').trade;
 
@@ -553,6 +556,112 @@ router.put('/trade_answer', async (req, res) => {
     console.log(error);
     await t.rollback();
     return res.status(500).send();
+  }
+});
+
+router.post('/add_list', async (req, res) => {
+  const { userId, chatId, franchiseNumber = 0, waifuNumber = 0 } = req.body;
+  const t = await sequelize.transaction();
+  try {
+    const user = await Users.findOne({ where: { user_id_tg: userId } });
+    const chat = await Chats.findOne({ where: { chat_id_tg: chatId } });
+    const profile = await Profiles.findOne({ where: { user_id: user.id, chat_id: chat.id } });
+    const data = {
+      user,
+      chat,
+      profile
+    };
+    if (franchiseNumber > 0) {
+      if (profile.points < 10) return res.status(204).send('No posees suficientes puntos para obtener una waifu');
+      
+      const franchise = await sequelize.query(`
+        SELECT 
+          f.id,
+          IF(f.nickname = '', f.name, CONCAT(f.name, ' (', f.nickname, ')')) name,
+          COUNT(w.id) quantity
+        FROM 
+          franchises f 
+          INNER JOIN waifus w ON f.id = w.franchise_id 
+        GROUP BY f.id
+        ORDER BY f.name
+        LIMIT 1 OFFSET ${franchiseNumber - 1}
+      `, { type: sequelize.QueryTypes.SELECT });
+      if (franchise.length == 0) return res.status(204).send('No se encontro la franquicia')
+
+      if (waifuNumber > 0) {
+        if (profile.points < 20) return res.status(204).send();
+
+        const waifu = await sequelize.query(`
+          SELECT 
+            id,
+            IF(nickname = '', name, CONCAT(name, ' (', nickname, ')')) name
+          FROM waifus
+          WHERE franchise_id = ${franchise[0].id}
+          ORDER BY name
+          LIMIT 1 OFFSET ${waifuNumber - 1}
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        if (waifu.length == 0) return res.status(204).send('No se encontro la waifu');
+
+        data.franchise = franchise[0]; 
+        data.waifu = waifu[0];
+        data.cost = 20;
+      } else {
+        const waifus = await sequelize.query(`
+          SELECT 
+            id,
+            IF(nickname = '', name, CONCAT(name, ' (', nickname, ')')) name
+          FROM waifus
+          WHERE franchise_id = ${franchise[0].id}
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        const index = await Math.round(Math.random() * (1 - waifus.length) + waifus.length);
+        const waifu = waifus[index];
+        
+        data.franchise = franchise[0]; 
+        data.waifu = waifu;
+        data.cost = 10;
+      }
+    } else {
+      if (profile.points < 5) return res.status(204),send();
+
+      const waifusQuantities = await sequelize.query(`SELECT COUNT(*) total FROM waifus`, { type: sequelize.QueryTypes.SELECT });
+      const waifuId = Math.round(Math.random() * (1 - waifusQuantities[0].total) + waifusQuantities[0].total);
+      const waifu = await Waifus.findOne({ where: { id: waifuId } });
+      const franchise = await Franchises.findOne({ where: { id: waifu.franchise_id } });
+
+      const franchiseFormated = {
+        id: franchise.id,
+        name: franchise.nickname == '' ? franchise.name : franchise.name + ' (' + franchise.nickname + ')'
+      }
+
+      const waifuFormated = {
+        id: waifu.id,
+        name: waifu.nickname == '' ? waifu.name : waifu.name + ' (' + waifu.nickname + ')'
+      }
+
+      data.franchise = franchiseFormated; 
+      data.waifu = waifuFormated;
+      data.cost = 5;
+    }
+    console.log(data);
+
+    await sequelize.query(`UPDATE user_infos SET points = points - ${data.cost} WHERE id = ${profile.id}`, { transaction: t });
+
+    const waifuInList = await WaifuLists.findOne({ where: { user_id: user.id, chat_id: chat.id, waifu_id: data.waifu.id } });
+    if (waifuInList) {
+      await sequelize.query(`UPDATE waifu_lists SET quantity = quantity + 1 WHERE id = ${waifuInList.id}`, { transaction: t });
+      console.log("se actualizo la cantidad");
+    } else {
+      await WaifuLists.create({ chat_id: chat.id, user_id: user.id, waifu_id: data.waifu.id, quantity: 1 }, { transaction: t });
+      console.log("se agrego una nueva");
+    }
+    await t.commit();
+    return res.status(200).send(data)
+  } catch (error) {
+    console.error(error);
+    await t.rollback();
+    return res.status(500).send(error);
   }
 });
 
