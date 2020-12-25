@@ -691,8 +691,9 @@ router.post('/delete_list', async (req, res) => {
         INNER JOIN waifus w ON w.id = wl.waifu_id 
         INNER JOIN franchises f ON f.id = w.franchise_id 
       WHERE
-        user_id = ${user.id} AND
-        chat_id = ${chat.id}
+        wl.user_id = ${user.id} AND
+        wl.chat_id = ${chat.id} AND
+        wl.quantity > 0
       ORDER BY f.name, w.name
       LIMIT 1 OFFSET ${waifuNumber - 1}
     `, { type: sequelize.QueryTypes.SELECT });
