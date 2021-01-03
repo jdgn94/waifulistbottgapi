@@ -58,16 +58,43 @@ router.get('/list', async (req, res) => {
 
     const list = await sequelize.query(`
       SELECT 
+        si.id,
         si.image_url, 
-        si.public_id
+        si.public_id,
+        IF(f.nickname = '', f.name, CONCAT(f.name, ' (', f.nickname, ')')) franchise
       FROM 
         user_special_lists usl 
         INNER JOIN special_images si ON si.id = usl.special_images_id 
+        INNER JOIN franchises f ON f.id = si.franchise_id
       WHERE 
         usl.user_id = ${user.id} AND
         usl.chat_id = ${chat.id}
       LIMIT 10 OFFSET ${ (page - 1) * 10 }
     `, { type: sequelize.QueryTypes.SELECT });
+
+    const listId = await Promise.all( await list.map(item => item.id) );
+
+    const waifus = await sequelize.query(`
+      SELECT
+        sir.special_image_id id,
+        IF(w.nickname = '', w.name, CONCAT(w.name, ' (', w.nickname, ')')) name
+      FROM 
+        special_image_relations sir 
+        INNER JOIN waifus w ON sir.waifu_id = w.id
+      WHERE 
+        sir.special_image_id IN (${listId.join(',')})
+      ORDER BY
+        w.name
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    const specialList = await Promise.all(
+      await list.map(async item => {
+        const waifusTemp = await waifus.filter(waifu => waifu.id == item.id);
+        const waifusTempName = await Promise.all(waifusTemp.map(waifu => waifu.name));
+        item.name = waifusTempName.join(', ');
+        return item;
+      })
+    );
 
     const total = await sequelize.query(`
       SELECT 
@@ -82,7 +109,7 @@ router.get('/list', async (req, res) => {
     if (list.length === 0) return res.status(205).send();
 
     const data = {
-      list,
+      list: specialList,
       actualPage: page,
       totalPages: Math.ceil(total[0].size / 10)
     };
