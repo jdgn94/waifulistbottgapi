@@ -41,8 +41,8 @@ router.get('/', async (req, res) => {
         INNER JOIN waifu_types AS wt ON wt.id = w.waifu_type_id 
         INNER JOIN franchises AS f ON f.id = w.franchise_id 
       WHERE
-        ${ id > 0 ? 'w.id = ' + id + ' AND' : '' }
-        ${ franchise_id > 0 ? 'f.id = ' + franchise_id + ' AND' : '' }
+        ${id > 0 ? 'w.id = ' + id + ' AND' : ''}
+        ${franchise_id > 0 ? 'f.id = ' + franchise_id + ' AND' : ''}
         (LOWER(w.name) LIKE '%${name.toLowerCase()}%' OR
         LOWER(w.nickname) LIKE '%${name.toLowerCase()}%' OR
         LOWER(w.age) LIKE '%${name.toLowerCase()}%' OR
@@ -51,10 +51,10 @@ router.get('/', async (req, res) => {
         LOWER(f.nickname) LIKE '%${name.toLowerCase()}%')
       ORDER BY
         f.name ASC, w.name ASC
-        ${limit ? 'LIMIT 20 OFFSET ' + ((page - 1) * 20) : '' }
+        ${limit ? 'LIMIT 20 OFFSET ' + ((page - 1) * 20) : ''}
     `,
-    { type: sequelize.QueryTypes.SELECT });
-    
+      { type: sequelize.QueryTypes.SELECT });
+
     const totalItems = await sequelize.query(`
       SELECT COUNT(*) AS total_items
       FROM 
@@ -62,8 +62,8 @@ router.get('/', async (req, res) => {
         INNER JOIN waifu_types AS wt ON wt.id = w.waifu_type_id 
         INNER JOIN franchises AS f ON f.id = w.franchise_id 
       WHERE
-        ${ id > 0 ? 'w.id = ' + id  + ' AND': '' }
-        ${franchise_id > 0 ? 'f.id = ' + franchise_id + ' AND' : '' }
+        ${id > 0 ? 'w.id = ' + id + ' AND' : ''}
+        ${franchise_id > 0 ? 'f.id = ' + franchise_id + ' AND' : ''}
         (LOWER(w.name) LIKE '%${name.toLowerCase()}%' OR
         LOWER(w.nickname) LIKE '%${name.toLowerCase()}%' OR
         LOWER(w.age) LIKE '%${name.toLowerCase()}%' OR
@@ -77,6 +77,31 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).send(error)
+  }
+});
+
+router.get('/active_chats', async (req, res) => {
+  try {
+    const waifus = await sequelize.query(`
+      SELECT
+        a.id,
+        a.chat_id,
+        w.name waifu_name,
+        w.nickname waifu_nickname,
+        w.image_url,
+        f.name franchise_name,
+        f.nickname franchise_nickname
+      FROM
+        actives a
+        INNER JOIN waifus w ON a.waifu_id = w.id
+        INNER JOIN franchises f on w.franchise_id = f.id
+      ORDER BY
+        chat_id
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    return res.status(200).send(waifus)
+  } catch (error) {
+    return res.status(500).send(error);
   }
 });
 
@@ -176,7 +201,7 @@ router.post('/protecc', async (req, res) => {
     const { name, nickname } = waifu;
     const nicknameArr = nickname.split(' ');
     const nameArr = name.split(' ');
-    
+
     let match = false;
     if (nickname.length > 0) {
       for (i = 1; i < text.length; i++) {
@@ -185,7 +210,7 @@ router.post('/protecc', async (req, res) => {
         });
       }
     }
-    
+
     if (!match) {
       for (i = 1; i < text.length; i++) {
         await nameArr.forEach(item => {
@@ -228,20 +253,20 @@ router.post('/protecc', async (req, res) => {
 
       const expType = { type: 'newWaifu', imgFavorite: waifu.fav_image_url != '' && waifu.fav_image_url != null ? true : false };
       if (userInfo) {
-       aditionalMessage = await utilUserInfo.addExpUser(userInfo.id, expType);
+        aditionalMessage = await utilUserInfo.addExpUser(userInfo.id, expType);
       } else {
         userInfo = await UserInfo.create({ user_id: user.id, chat_id: chat.id });
-       aditionalMessage = await utilUserInfo.addExpUser(userInfo.id, expType);
+        aditionalMessage = await utilUserInfo.addExpUser(userInfo.id, expType);
       }
 
       await sequelize.query(`DELETE FROM actives WHERE id = ${waifu.active_id}`, { type: sequelize.QueryTypes.DELETE });
 
-      messageResponse = `Has agregado a ${waifu.name}${waifu.nickname.length > 0 ? ' (' + waifu.nickname + ')': ''} de la serie ${waifu.franchise_name}${waifu.franchise_nickname.length > 0 ? ' (' + waifu.franchise_nickname + ')' : ''}, ahora aparecera en tu lista`;
+      messageResponse = `Has agregado a ${waifu.name}${waifu.nickname.length > 0 ? ' (' + waifu.nickname + ')' : ''} de la serie ${waifu.franchise_name}${waifu.franchise_nickname.length > 0 ? ' (' + waifu.franchise_nickname + ')' : ''}, ahora aparecera en tu lista`;
       extras.userId = user.id;
       extras.chatId = chat.id;
       extras.newWaifu = true;
 
-      switch(waifu.type){
+      switch (waifu.type) {
         case 1:
           messageResponse += '.\ndejame decirte que es una loli';
           break;
@@ -257,9 +282,9 @@ router.post('/protecc', async (req, res) => {
       }
       if (waifu.age > 0 && waifu.age < 17) {
         messageResponse += `... pero es menor de edad, el FBI te esta vigilando`;
-      } else if(waifu.age == 17) {
+      } else if (waifu.age == 17) {
         messageResponse += `... dejame decirte que todavía es ilegal así que estas bajo vigilancia`;
-      } else if(waifu.age > 17 && waifu.age < 50) {
+      } else if (waifu.age > 17 && waifu.age < 50) {
         messageResponse += ` esta es completamente legal, no te preocupes`;
       } else {
         messageResponse += ' pero... ¿acaso sabes cual es su edad?';
@@ -334,7 +359,7 @@ router.post('/change_favorite', async (req, res) => {
       WHERE
         c.chat_id_tg = ${chatId} AND
         u.user_id_tg = ${userId}
-    `, { type: sequelize.QueryTypes.SELECT  });
+    `, { type: sequelize.QueryTypes.SELECT });
 
     let newList = [];
     let insert = false;
@@ -353,11 +378,11 @@ router.post('/change_favorite', async (req, res) => {
       if (position - 1 == index) {
         insert = true;
         if (waifuSelected.length > 0) {
-          await newList.push({ id: waifuSelected[0].id, waifu_list_id:waifuSelected[0].waifu_list_id, position: index + 1 });
+          await newList.push({ id: waifuSelected[0].id, waifu_list_id: waifuSelected[0].waifu_list_id, position: index + 1 });
         } else {
           await newList.push({ id: null, waifu_list_id: waifu[0].id, position: index + 1 });
         }
-        await newList.push({ id: item.id, waifu_list_id:item.waifu_list_id, position: index + 2 });
+        await newList.push({ id: item.id, waifu_list_id: item.waifu_list_id, position: index + 2 });
       } else if (insert) {
         await newList.push({ id: item.id, waifu_list_id: item.waifu_list_id, position: index + 2 });
       } else {
@@ -421,8 +446,8 @@ router.get('/:id', async (req, res) => {
         INNER JOIN franchises AS f ON f.id = w.franchise_id 
       WHERE
         w.id = ${id}
-    `,{ type: sequelize.QueryTypes.SELECT });
-    
+    `, { type: sequelize.QueryTypes.SELECT });
+
     return res.status(200).send(waifu[0]);
   } catch (error) {
     console.error(error);
@@ -442,7 +467,7 @@ router.put('/:id', async (req, res) => {
 
     if (image) {
       await cloudinary.v2.uploader.destroy(waifu.public_id);
-  
+
       imageDefault = await uploadPhoto(image[0].path);
     } else {
       imageDefault = { public_id: waifu.public_id, secure_url: waifu.image_url };
@@ -450,7 +475,7 @@ router.put('/:id', async (req, res) => {
 
     if (fav_img) {
       if (waifu.fav_public_id) await cloudinary.v2.uploader.destroy(waifu.fav_public_id);
-  
+
       imageFavorite = await uploadPhoto(fav_img[0].path);
     } else {
       imageFavorite = { public_id: waifu.fav_public_id, secure_url: waifu.fav_image_url };
@@ -472,6 +497,31 @@ router.put('/:id', async (req, res) => {
       WHERE id = ${id}
     `, { type: sequelize.QueryTypes.UPDATE });
     return res.status(200).send('update');
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send(error);
+  }
+});
+
+router.post('/span_specific', async (req, res) => {
+  const { waifu_id, chat_id } = req.body;
+
+  // return res.status(200).json({ message: 'llegue a la llamada' });
+
+  const t = await sequelize.transaction();
+
+  try {
+    await sequelize.query(`
+      INSERT INTO actives
+      SET
+        waifu_id = ${waifu_id},
+        chat_id = ${chat_id},
+        attempts = 10
+      `,
+      { tramsaction: t }
+    );
+
+    return res.status(201).json({ message: 'Waifu spanmed' });
   } catch (error) {
     console.error(error);
     return res.status(500).send(error);
