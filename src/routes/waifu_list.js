@@ -61,7 +61,7 @@ router.get('/', async (req, res) => {
     `, { type: sequelize.QueryTypes.SELECT });
 
     const totalPages = Math.ceil(totalItems[0].total_items / 20);
-    if (waifus.length > 0) return res.status(200).send({ message:"Estas tu lista", waifus, page, totalPages });
+    if (waifus.length > 0) return res.status(200).send({ message: "Estas tu lista", waifus, page, totalPages });
     else return res.status(201).send({ message: "Lo siento pero no tienes waifus en tu lista, debes ser mas rapido que los demas", waifus });
   } catch (error) {
     console.error(error);
@@ -131,18 +131,18 @@ router.get('/details', async (req, res) => {
         w.age > 17 AND
         wl.quantity > 0
     `, { type: sequelize.QueryTypes.SELECT });
-  
+
     const data = {
-      totals: total.length > 0 ? total[0].total: 0,
+      totals: total.length > 0 ? total[0].total : 0,
       indefinides: indefinides.length > 0 ? indefinides[0].indefinides : 0,
       ilegals: ilegals.length > 0 ? ilegals[0].ilegals : 0,
       legals: legals.length > 0 ? legals[0].legals : 0
     }
     let message = '';
-  
+
     if (data.ilegals > data.indefinides && data.ilegals > data.legals) message = 'Dejame decirte que estas en problemas, te gustan mucho las ilegales cuidado con el #FBI que te tiene bien vigilado, aqui el total de waifus en tu lista: ';
     else if (data.legals > data.indefinides && data.legals > data.ilegals) message = 'Dejame decirte que estas en lo legal, no tengo nada que decir solo que aqui esta la cantidad de waifus en tu lista: ';
-    else if(data.indefinides > data.legals && data.indefinides > data.ilegals) message = 'Dejame decirte que no estas en problemas pero no sabía que tus gustos eran hacia las mayores, aqui el numero total de tus waifus: ';
+    else if (data.indefinides > data.legals && data.indefinides > data.ilegals) message = 'Dejame decirte que no estas en problemas pero no sabía que tus gustos eran hacia las mayores, aqui el numero total de tus waifus: ';
     else if (data.ilegals == data.indefinides && data.ilegals == data.legals) message = 'Tu eres una persona completamente neutral, me agradas mucho, aqui esta la cantidad total de tus waifus: ';
     else if (data.ilegals == data.indefinides || data.ilegals == data.legals) message = 'Tus gustos son un tanto extraño, el #FBI te tiene en su lista aunque solo te vigilan aveces, aqui esta la cantidad de waifus que tienes: ';
     else message = 'Las que mas te mas tienes son legales, exelente eres una persona que va por el camino correcto de la vida, aqui el numero de tus waifus: ';
@@ -246,7 +246,7 @@ router.get('/favorites_details', async (req, res) => {
       message += '\nNo estas en problemas pero... no sabia que te gustabas la mayores';
     } else {
       message += '\nTus guston son algo extraños, no se como calificarte';
-    } 
+    }
     return res.status(200).send({ message });
   } catch (error) {
     console.error(error);
@@ -276,7 +276,7 @@ router.get('/trade_info', async (req, res) => {
         t.message_id = ${messageId}
       LIMIT 1
     `, { type: sequelize.QueryTypes.SELECT });
-    
+
     const data = {
       chatId: messageInfo[0].chat_id,
       user_emiter_id: messageInfo[0].user_emiter_id,
@@ -297,8 +297,8 @@ router.put('/deleted_favorite', async (req, res) => {
   const { position, userIdTg, chatIdTg } = req.body;
   const t = await sequelize.transaction();
   try {
-    const chat = await Chats.findOne({ where: { chat_id_tg: chatIdTg }});
-    const user = await Users.findOne({ where: { user_id_tg: userIdTg }});
+    const chat = await Chats.findOne({ where: { chat_id_tg: chatIdTg } });
+    const user = await Users.findOne({ where: { user_id_tg: userIdTg } });
     const waifuToDelete = await sequelize.query(`
       SELECT
         wfl.id,
@@ -315,9 +315,9 @@ router.put('/deleted_favorite', async (req, res) => {
         wl.chat_id = ${user.id}
       LIMIT 1
     `, { type: sequelize.QueryTypes.SELECT });
-    
+
     if (waifuToDelete.length < 1) return res.status(200).send({ message: 'No tienes una waifu en esa posicion' });
-    await WaifuFavoriteLists.destroy({ where: { id: waifuToDelete[0].id }}, { transaction: t });
+    await WaifuFavoriteLists.destroy({ where: { id: waifuToDelete[0].id } }, { transaction: t });
     const allWaifus = await sequelize.query(`
       SELECT
         wfl.id,
@@ -332,16 +332,16 @@ router.put('/deleted_favorite', async (req, res) => {
     `, { type: sequelize.QueryTypes.SELECT });
 
     const newPositionAllWaifus = await reasingPos(allWaifus);
-    console.log('-------------------------------------------');
-    console.log('-------------------------------------------');
-    console.log("id de waifus con sus nuevas posiciones", newPositionAllWaifus);
-    console.log('-------------------------------------------');
-    console.log('-------------------------------------------');
+    // console.log('-------------------------------------------');
+    // console.log('-------------------------------------------');
+    // console.log("id de waifus con sus nuevas posiciones", newPositionAllWaifus);
+    // console.log('-------------------------------------------');
+    // console.log('-------------------------------------------');
     await WaifuFavoriteLists.bulkCreate(newPositionAllWaifus, { transaction: t, updateOnDuplicate: ['position'] });
-    
+
     await t.commit();
     const waifuName = `${waifuToDelete[0].name} de la franquicia ${waifuToDelete[0].franchise}`;
-    return res.status(200).send({ message: `Se ha eliminado de la lista de favoritos a ${waifuName}`})
+    return res.status(200).send({ message: `Se ha eliminado de la lista de favoritos a ${waifuName}` })
   } catch (error) {
     console.error(error);
     await t.rollback()
@@ -358,9 +358,9 @@ router.put('/trade_proposition', async (req, res) => {
       FROM users
       WHERE user_id_tg = '${userId}' || user_id_tg = '${otherUserId}'
     `, { type: sequelize.QueryTypes.SELECT });
-  
+
     const chat = await sequelize.query(`SELECT id FROM chats WHERE chat_id_tg = '${chatId}' LIMIT 1`, { type: sequelize.QueryTypes.SELECT });
-  
+
     console.log(users);
     let myUser, otherUser;
     await users.forEach(item => {
@@ -368,7 +368,7 @@ router.put('/trade_proposition', async (req, res) => {
       if (item.user_id_tg == userId.toString()) myUser = item;
       else otherUser = item;
     });
-  
+
     const query = `
       SELECT 
         wl.id,
@@ -389,7 +389,7 @@ router.put('/trade_proposition', async (req, res) => {
     `;
 
     console.log(chat);
-  
+
     const myWaifu = await sequelize.query(`
       ${query}
         wl.user_id = ${myUser.id} AND 
@@ -398,7 +398,7 @@ router.put('/trade_proposition', async (req, res) => {
       ORDER BY f.name ASC, w.name ASC
       LIMIT 1 OFFSET ${myWaifuNumber - 1};
     `, { type: sequelize.QueryTypes.SELECT });
-  
+
     const otherWaifu = await sequelize.query(`
       ${query}
         wl.user_id = ${otherUser.id} AND 
@@ -408,16 +408,16 @@ router.put('/trade_proposition', async (req, res) => {
       LIMIT 1 OFFSET ${otherWaifuNumber - 1};
     `, { type: sequelize.QueryTypes.SELECT });
 
-    
-    if (myWaifu.length == 0) return res.status(201).send({ message: `Tu no tienes una waifu en la posición ${myWaifuNumber} para poder intercambiar`});
+
+    if (myWaifu.length == 0) return res.status(201).send({ message: `Tu no tienes una waifu en la posición ${myWaifuNumber} para poder intercambiar` });
     else if (otherWaifu.length == 0) return res.status(201).send({ message: `Con quien quieres intercambiar no tiene una waifu en la posición ${otherWaifuNumber}` });
-    
+
     const trade = await Trades.create({
-     message_id: 0,
-     waifu_emiter_id: myWaifu[0].id,
-     waifu_receptor_id: otherWaifu[0].id,
-     chat_id: chat[0].id
-   });
+      message_id: 0,
+      waifu_emiter_id: myWaifu[0].id,
+      waifu_receptor_id: otherWaifu[0].id,
+      chat_id: chat[0].id
+    });
 
     console.log(myWaifu[0], otherWaifu[0]);
     return res.status(200).send({ myWaifu: myWaifu[0], otherWaifu: otherWaifu[0], tradeId: trade.dataValues.id });
@@ -485,7 +485,7 @@ router.put('/trade_answer', async (req, res) => {
         (ue.user_id_tg = ${userTgId} OR ur.user_id_tg = ${userTgId})
       LIMIT 1;
     `,
-    { type: sequelize.QueryTypes.SELECT });
+      { type: sequelize.QueryTypes.SELECT });
 
     if (!trade) return res.status(401).send('No puedes intervenir en el intercambio');
 
@@ -573,7 +573,7 @@ router.post('/add_list', async (req, res) => {
     };
     if (franchiseNumber > 0) {
       if (profile.points < 10) return res.status(205).send('No posees suficientes puntos para obtener una waifu');
-      
+
       const franchise = await sequelize.query(`
         SELECT 
           f.id,
@@ -603,7 +603,7 @@ router.post('/add_list', async (req, res) => {
 
         if (waifu.length == 0) return res.status(205).send('No se encontro la waifu');
 
-        data.franchise = franchise[0]; 
+        data.franchise = franchise[0];
         data.waifu = waifu[0];
         data.cost = 20;
       } else {
@@ -617,13 +617,13 @@ router.post('/add_list', async (req, res) => {
 
         const index = await Math.round(Math.random() * (0 - (waifus.length - 1)) + waifus.length - 1);
         const waifu = waifus[index];
-        
-        data.franchise = franchise[0]; 
+
+        data.franchise = franchise[0];
         data.waifu = waifu;
         data.cost = 10;
       }
     } else {
-      if (profile.points < 5) return res.status(205),send();
+      if (profile.points < 5) return res.status(205), send();
 
       const waifusQuantities = await sequelize.query(`SELECT COUNT(*) total FROM waifus`, { type: sequelize.QueryTypes.SELECT });
       const waifuId = Math.round(Math.random() * (1 - waifusQuantities[0].total) + waifusQuantities[0].total);
@@ -640,7 +640,7 @@ router.post('/add_list', async (req, res) => {
         name: waifu.nickname == '' ? waifu.name : waifu.name + ' (' + waifu.nickname + ')'
       }
 
-      data.franchise = franchiseFormated; 
+      data.franchise = franchiseFormated;
       data.waifu = waifuFormated;
       data.cost = 5;
     }
@@ -666,7 +666,7 @@ router.post('/add_list', async (req, res) => {
 });
 
 async function deleteTrade(tradeId, t) {
-  await sequelize.query(`DELETE FROM trades WHERE id = ${tradeId}`, { type: sequelize.QueryTypes.DELETE , transaction: t });
+  await sequelize.query(`DELETE FROM trades WHERE id = ${tradeId}`, { type: sequelize.QueryTypes.DELETE, transaction: t });
   await t.commit();
 }
 
@@ -701,7 +701,7 @@ router.post('/delete_list', async (req, res) => {
     if (waifu[0].quantity <= 1) return res.status(205).send(`Debes tener a ${waifu[0].name} de ${waifu[0].franchise} más de 1 vez para porder cambiarla por puntos`);
 
     const quantityDelete = quantity >= waifu[0].quantity ? waifu[0].quantity - 1 : quantity == 0 ? 1 : quantity;
-    
+
     await sequelize.query(`UPDATE user_infos SET points = points + ${quantityDelete} WHERE id = ${profile.id}`, { transaction: t });
     await sequelize.query(`UPDATE waifu_lists SET quantity = quantity - ${quantityDelete} WHERE id = ${waifu[0].id}`, { transaction: t });
 
@@ -742,10 +742,10 @@ async function addWaifu(waifuListId, t) {
     SET quantity = quantity + 1
     WHERE id = ${waifuListId}
   `,
-  { 
-    type: sequelize.QueryTypes.UPDATE,
-    transaction: t
-  });
+    {
+      type: sequelize.QueryTypes.UPDATE,
+      transaction: t
+    });
   return;
 }
 
@@ -755,10 +755,10 @@ async function removeWaifu(waifuListId, t) {
     SET quantity = quantity - 1
     WHERE id = ${waifuListId}
   `,
-  {
-    type: sequelize.QueryTypes.UPDATE,
-    transaction: t
-  });
+    {
+      type: sequelize.QueryTypes.UPDATE,
+      transaction: t
+    });
   return;
 }
 
@@ -766,10 +766,10 @@ async function deleteWaifu(waifuListId, t) {
   await sequelize.query(`
     DELETE FROM waifu_lists WHERE id = ${waifuListId}
   `,
-  {
-    type: sequelize.QueryTypes.DELETE,
-    transaction: t
-  });
+    {
+      type: sequelize.QueryTypes.DELETE,
+      transaction: t
+    });
   return
 }
 
@@ -779,7 +779,7 @@ async function createWaifu(userId, waifuId, chatId, t) {
 }
 
 async function reasingPos(allWaifus) {
-  let newPositionAllWaifus = [] ;
+  let newPositionAllWaifus = [];
 
   const length = allWaifus.length;
   for (let index = 0; index < length; index++) {

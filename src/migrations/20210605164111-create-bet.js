@@ -1,31 +1,17 @@
 'use strict';
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('waifus', {
+    await queryInterface.createTable('bets', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      name: {
-        type: Sequelize.STRING
-      },
-      nickname: {
-        type: Sequelize.STRING
-      },
-      age: {
-        type: Sequelize.INTEGER,
-        defaultValue: 18
-      },
-      servant: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: false
-      },
-      waifu_type_id: {
+      user_info_id: {
         type: Sequelize.INTEGER,
         references: {
-          model: 'waifu_types',
+          model: 'user_infos',
           key: 'id'
         },
         onDelete: 'NO ACTION',
@@ -40,26 +26,12 @@ module.exports = {
         onDelete: 'NO ACTION',
         onUpdate: 'NO ACTION'
       },
-      public_id: {
-        type: Sequelize.STRING
+      quantity: {
+        type: Sequelize.INTEGER
       },
-      image_url: {
-        type: Sequelize.STRING
-      },
-      fav_public_id: {
-        type: Sequelize.STRING
-      },
-      fav_image_url: {
-        type: Sequelize.STRING
-      },
-      waifu_id: {
-        type: Sequelize.INTEGER,
-        references: {
-          model: 'waifus',
-          key: 'id'
-        },
-        onDelete: 'NO ACTION',
-        onUpdate: 'NO ACTION'
+      active: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
       },
       createdAt: {
         allowNull: false,
@@ -74,6 +46,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('waifus');
+    await queryInterface.dropTable('bets');
   }
 };

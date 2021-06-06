@@ -5,6 +5,7 @@ const User = require('../models').user;
 const UserInfo = require('../models').user_info;
 const WaifuList = require('../models').waifu_list;
 const UserInfos = require('../models').user_info;
+const Bet = require('../models').bet;
 const utilUserInfo = require('../utils/userInfo');
 const db = require('../models');
 const fs = require('fs-extra');
@@ -80,7 +81,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/active_chats', async (req, res) => {
+router.get('/active', async (req, res) => {
   try {
     const waifus = await sequelize.query(`
       SELECT
@@ -105,22 +106,22 @@ router.get('/active_chats', async (req, res) => {
   }
 });
 
-router.get('/active', async (req, res) => {
-  try {
-    const waifus = await sequelize.query(`
-      SELECT
-        w.name,
-        w.nickname
-      FROM
-        actives a
-        INNER JOIN waifus w ON a.waifu_id = w.id 
-    `, { type: sequelize.QueryTypes.SELECT });
+// router.get('/active', async (req, res) => {
+//   try {
+//     const waifus = await sequelize.query(`
+//       SELECT
+//         w.name,
+//         w.nickname
+//       FROM
+//         actives a
+//         INNER JOIN waifus w ON a.waifu_id = w.id 
+//     `, { type: sequelize.QueryTypes.SELECT });
 
-    return res.status(200).send(waifus)
-  } catch (error) {
-    return res.status(500).send(error);
-  }
-});
+//     return res.status(200).send(waifus)
+//   } catch (error) {
+//     return res.status(500).send(error);
+//   }
+// });
 
 router.post('/create', async (req, res) => {
   const { name, nickname, age, waifu_type_id, servant, franchise_id } = req.body;
@@ -150,7 +151,7 @@ router.post('/create', async (req, res) => {
 });
 
 router.get('/send_waifu', async (req, res) => {
-  const { chatId } = req.query;
+  const { chatId, franchise } = req.query;
   try {
     const chatData = await Chat.findOne({ where: { chat_id_tg: chatId } });
     const chat = chatData.dataValues;
@@ -171,6 +172,7 @@ router.get('/send_waifu', async (req, res) => {
 
 router.post('/protecc', async (req, res) => {
   const { message } = req.body;
+  const t = await sequelize.transaction();
   try {
     const text = message.text.split(' ');
     const data = await sequelize.query(`
@@ -182,6 +184,7 @@ router.post('/protecc', async (req, res) => {
         w.fav_image_url,
         wt.id waifu_type_id,
         wt.name waifu_type_name,
+        f.id franchise_id,
         f.name franchise_name,
         f.nickname franchise_nickname,
         c.id chat_id,
@@ -206,7 +209,8 @@ router.post('/protecc', async (req, res) => {
     if (nickname.length > 0) {
       for (i = 1; i < text.length; i++) {
         await nicknameArr.forEach(item => {
-          if (item.toLowerCase() == text[i].toLowerCase()) match = true;
+          const regEx = new RegExp(`^.*${text[i].toLowerCase()}.*$`);
+          if (regEx.test(item.toLowerCase())) match = true;
         });
       }
     }
@@ -214,12 +218,14 @@ router.post('/protecc', async (req, res) => {
     if (!match) {
       for (i = 1; i < text.length; i++) {
         await nameArr.forEach(item => {
-          if (item.toLowerCase() == text[i].toLowerCase()) match = true;
+          const regEx = new RegExp(`^.*${text[i].toLowerCase()}.*$`);
+          if (regEx.test(item.toLowerCase())) match = true;
         });
       }
     }
 
     let messageResponse = '';
+    let resultBets = [];
     let aditionalMessage = '';
     const extras = {
       userId: '',
@@ -234,21 +240,22 @@ router.post('/protecc', async (req, res) => {
       let userInfo = await UserInfo.findOne({ where: { user_id: user.id, chat_id: chat.id } });
       console.log("datos del usuario en el mensaje", message.from);
       if (!user) {
-        user = await User.create({ user_id_tg: message.from.id, nickname: `${message.from.username || message.from.first_name}` });
+        user = await User.create({ user_id_tg: message.from.id, nickname: `${message.from.username || message.from.first_name}` }, { transaction: t });
       } else {
-        await sequelize.query(`UPDATE users SET nickname = '${message.from.username || message.from.first_name}' WHERE id = ${user.dataValues.id}`, { type: sequelize.QueryTypes.UPDATE });
+        await sequelize.query(`UPDATE users SET nickname = '${message.from.username || message.from.first_name}' WHERE id = ${user.dataValues.id}`, { type: sequelize.QueryTypes.UPDATE, transaction: t });
       }
 
-      const waifuInList = await WaifuList.findOne({ where: { user_id: user.dataValues.id, chat_id: chat.dataValues.id, waifu_id: waifu.id } });
+      const waifuInList = await WaifuList.findOne({ where: { user_id: user.dataValues.id, chat_id: chat.dataValues.id, waifu_id: waifu.id } }, { transaction: t });
 
       if (!waifuInList) {
-        await WaifuList.create({ user_id: user.dataValues.id, chat_id: chat.dataValues.id, waifu_id: waifu.id, quantity: 1 });
+        await WaifuList.create({ user_id: user.dataValues.id, chat_id: chat.dataValues.id, waifu_id: waifu.id, quantity: 1 }, { transaction: t });
       } else {
-        await sequelize.query(`
-          UPDATE waifu_lists
+        await sequelize.query(
+          `UPDATE waifu_lists
           SET quantity = quantity + 1
-          WHERE id = ${waifuInList.dataValues.id}
-        `);
+          WHERE id = ${waifuInList.dataValues.id} `,
+          { type: sequelize.QueryTypes.UPDATE, transaction: t }
+        );
       }
 
       const expType = { type: 'newWaifu', imgFavorite: waifu.fav_image_url != '' && waifu.fav_image_url != null ? true : false };
@@ -259,7 +266,7 @@ router.post('/protecc', async (req, res) => {
         aditionalMessage = await utilUserInfo.addExpUser(userInfo.id, expType);
       }
 
-      await sequelize.query(`DELETE FROM actives WHERE id = ${waifu.active_id}`, { type: sequelize.QueryTypes.DELETE });
+      await sequelize.query(`DELETE FROM actives WHERE id = ${waifu.active_id}`, { type: sequelize.QueryTypes.DELETE, transaction: t });
 
       messageResponse = `Has agregado a ${waifu.name}${waifu.nickname.length > 0 ? ' (' + waifu.nickname + ')' : ''} de la serie ${waifu.franchise_name}${waifu.franchise_nickname.length > 0 ? ' (' + waifu.franchise_nickname + ')' : ''}, ahora aparecera en tu lista`;
       extras.userId = user.id;
@@ -289,21 +296,25 @@ router.post('/protecc', async (req, res) => {
       } else {
         messageResponse += ' pero... ¿acaso sabes cual es su edad?';
       }
+
+      resultBets = await deleteBetsActives(waifu.chat_id, waifu.franchise_id, t);
     } else {
       messageResponse = 'No ese no es su nombre';
       const active = await Active.findOne({ where: { id: waifu.active_id } });
       if (active.dataValues.attempts > 1) {
         messageResponse += `, apurense solo quedan ${active.dataValues.attempts - 1}`;
-        await sequelize.query(`UPDATE actives SET attempts = attempts - 1 WHERE id = ${waifu.active_id}`, { type: sequelize.QueryTypes.UPDATE });
+        await sequelize.query(`UPDATE actives SET attempts = attempts - 1 WHERE id = ${waifu.active_id}`, { type: sequelize.QueryTypes.UPDATE, transaction: t });
       } else {
         messageResponse += ', lo siento, se acabaron los intentos. Sera para la proxima';
-        await sequelize.query(`DELETE FROM actives WHERE id = ${waifu.active_id}`, { type: sequelize.QueryTypes.DELETE });
+        await sequelize.query(`DELETE FROM actives WHERE id = ${waifu.active_id}`, { type: sequelize.QueryTypes.DELETE, transaction: t });
       }
     }
     messageResponse += '\n' + aditionalMessage;
-    return res.status(200).json({ message: messageResponse, extras });
+    await t.commit();
+    return res.status(200).json({ message: messageResponse, extras, bets: resultBets });
   } catch (error) {
     console.error(error);
+    t.rollback();
     return res.status(500).send(error);
   }
 });
@@ -536,6 +547,79 @@ async function uploadPhoto(path) {
 
   await fs.unlink(path);
   return result;
+}
+
+async function deleteBetsActives(chat_id, franchise_id, t) {
+  const sql =
+    `SELECT 
+      b.id,
+      b.franchise_id,
+      b.active,
+      b.quantity,
+      ui.chat_id,
+      u.nickname,
+      ui.id user_info_id 
+    FROM 
+      bets b 
+      INNER JOIN user_infos ui ON b.user_info_id = ui.id
+      INNER JOIN users u ON u.id = ui.user_id
+    WHERE 
+      ui.chat_id = ${chat_id}`;
+
+  const bets = await sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
+
+  const betsActives = await Promise.all(bets.filter(bet => bet.active == true));
+  const betsUnactive = await Promise.all(bets.filter(bet => bet.active == false));
+
+  console.log(betsActives, betsUnactive)
+
+  const betsWinners = await Promise.all(betsActives.filter(bet => bet.franchise_id === franchise_id));
+  const betsLosers = await Promise.all(betsActives.filter(bet => bet.franchise_id !== franchise_id));
+
+  let winners = [];
+  let losers = [];
+
+  if (betsWinners.length > 0) {
+    winners = await Promise.all(betsWinners.map(async winner => {
+      await sequelize.query(
+        `UPDATE user_infos
+        SET 
+          points = points + ${winner.quantity * 10},
+          total_bets_won = total_bets_won + 1,
+          total_bets_points_won = total_bets_points_won + ${winner.quantity * 10}
+        WHERE id = ${winner.user_info_id}`,
+        { type: sequelize.QueryTypes.UPDATE, transaction: t }
+      );
+      return `@${winner.nickname} ha ganado ${winner.quantity * 10}.`
+    }));
+  }
+
+  if (betsLosers.length > 0) {
+    losers = await Promise.all(betsLosers.map(async loser => {
+      await sequelize.query(
+        `UPDATE user_infos 
+        SET total_bets_lost = total_bets_lost + 1
+        WHERE id = ${loser.user_info_id}`,
+        { type: sequelize.QueryTypes.UPDATE, transaction: t }
+      );
+      return `@${loser.nickname}`
+    }));
+  }
+
+  const idToDelete = await Promise.all(betsActives.map(bet => bet.id));
+  await Bet.destroy({ where: { id: idToDelete } }, { transaction: t });
+
+  if (betsUnactive.length > 0) {
+    const idToIpdate = await Promise.all(betsUnactive.map(bet => bet.id));
+    const query =
+      `UPDATE bets
+      SET active = ${true}
+      WHERE id IN (${idToIpdate})`;
+
+    await sequelize.query(query, { type: sequelize.QueryTypes.UPDATE, transaction: t });
+  }
+
+  return { winners, losers };
 }
 
 module.exports = router;
