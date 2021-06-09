@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
 
     const bets = await sequelize.query(query, { type: sequelize.QueryTypes.SELECT });
 
-    const message = await Promise.all(bets.map(bet => `@${bet.user_nickname} aposto por ${bet.franchise_name} un total de ${bet.quantity} punto(s).`));
+    const message = await Promise.all(bets.map(bet => `@${bet.user_nickname} aposto por ${bet.franchise_name} un total de ${bet.points} punto(s).`));
 
     return res.status(200).json({ message });
   } catch (error) {
