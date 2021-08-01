@@ -173,8 +173,9 @@ router.get('/send_waifu', async (req, res) => {
 router.post('/protecc', async (req, res) => {
   const { message } = req.body;
   const t = await sequelize.transaction();
+  const regExp = new RegExp(/[\s_.,-]/)
   try {
-    const text = message.text.split(' ');
+    const text = message.text.split(regExp);
     const data = await sequelize.query(`
       SELECT
         w.id,
@@ -202,8 +203,8 @@ router.post('/protecc', async (req, res) => {
     if (data.length == 0) return res.status(201).send();
     const waifu = data[0];
     const { name, nickname } = waifu;
-    const nicknameArr = nickname.split(' ');
-    const nameArr = name.split(' ');
+    const nicknameArr = nickname.split(regExp);
+    const nameArr = name.split(regExp);
 
     let match = false;
     if (nickname.length > 0) {
