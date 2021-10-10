@@ -210,8 +210,7 @@ router.post('/protecc', async (req, res) => {
     if (nickname.length > 0) {
       for (i = 1; i < text.length; i++) {
         await nicknameArr.forEach(item => {
-          const regEx = new RegExp(`^.*${text[i].toLowerCase()}.*$`);
-          if (regEx.test(item.toLowerCase())) match = true;
+          if (item.toLowerCase() == text[i].toLowerCase()) match = true;
         });
       }
     }
@@ -219,8 +218,7 @@ router.post('/protecc', async (req, res) => {
     if (!match) {
       for (i = 1; i < text.length; i++) {
         await nameArr.forEach(item => {
-          const regEx = new RegExp(`^.*${text[i].toLowerCase()}.*$`);
-          if (regEx.test(item.toLowerCase())) match = true;
+          if (item.toLowerCase() == text[i].toLowerCase()) match = true;
         });
       }
     }
