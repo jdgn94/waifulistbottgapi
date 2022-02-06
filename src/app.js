@@ -1,51 +1,50 @@
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-const multer = require('multer');
-const path = require('path');
-const uuid = require('uuid')
-
-const baseURL = '/api';
-const waifus = require('./routes/waifus');
-const franchises = require('./routes/franchise');
-const waifuTypes = require('./routes/waifu_type');
-const chats = require('./routes/chats');
-const waifuLists = require('./routes/waifu_list');
-const user = require('./routes/user');
-const specialImage = require('./routes/special_image');
-const bets = require('./routes/bets');
-
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
+const morgan_1 = __importDefault(require("morgan"));
+const multer_1 = __importDefault(require("multer"));
+const path_1 = __importDefault(require("path"));
+const uuid_1 = __importDefault(require("uuid"));
+// import waifus from './routes/waifus';
+// import franchises from './routes/franchise';
+// import waifuTypes from './routes/waifu_type';
+// import chats from './routes/chats';
+// import waifuLists from './routes/waifu_list';
+// import user from './routes/user';
+// import specialImage from './routes/special_image';
+// import bets from './routes/bets';
 // initialization
-const app = express();
-
+const baseURL = '/api';
+const app = (0, express_1.default)();
 // settings
 app.set('port', process.env.PORT || 3000);
-
 // middelwares
-app.use(morgan('dev'));
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-const storage = multer.diskStorage({
-  destination: path.join(__dirname, 'public/uploads'),
-  filename: (req, file, cb) => {
-    console.log(file.path);
-    cb(null, uuid.v4() + path.extname(file.originalname));
-  }
+app.use((0, morgan_1.default)('dev'));
+app.use((0, cors_1.default)());
+app.use(express_1.default.json());
+app.use(express_1.default.urlencoded({ extended: false }));
+const storage = multer_1.default.diskStorage({
+    destination: path_1.default.join(__dirname, 'public/uploads'),
+    filename: (req, file, cb) => {
+        console.log(file.path);
+        cb(null, uuid_1.default.v4() + path_1.default.extname(file.originalname));
+    }
 });
-app.use(multer({ storage }).fields([
-  { name: 'image', maxCount: 1 },
-  { name: 'fav_img', maxCount: 1 }
+app.use((0, multer_1.default)({ storage }).fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'fav_img', maxCount: 1 }
 ]));
-
 // routes
-app.use(baseURL + '/waifus', waifus);
-app.use(baseURL + '/franchises', franchises);
-app.use(baseURL + '/waifu_types', waifuTypes);
-app.use(baseURL + '/chats', chats);
-app.use(baseURL + '/waifu_list', waifuLists);
-app.use(baseURL + '/user', user);
-app.use(baseURL + '/special_image', specialImage);
-app.use(baseURL + '/bets', bets);
-
-module.exports = app;
+// app.use(baseURL + '/waifus', waifus);
+// app.use(baseURL + '/franchises', franchises);
+// app.use(baseURL + '/waifu_types', waifuTypes);
+// app.use(baseURL + '/chats', chats);
+// app.use(baseURL + '/waifu_list', waifuLists);
+// app.use(baseURL + '/user', user);
+// app.use(baseURL + '/special_image', specialImage);
+// app.use(baseURL + '/bets', bets);
+exports.default = app;
