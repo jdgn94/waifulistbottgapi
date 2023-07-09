@@ -1,7 +1,7 @@
-import { Router, Request, Response } from 'express';
-import { QueryTypes } from 'sequelize';
+import { Router, Request, Response } from "express";
+import { QueryTypes } from "sequelize";
 
-import db from '../db/models';
+import db from "../../db/models";
 
 const Actives = db.ActiveModel;
 const Chats = db.ChatModel;
@@ -9,25 +9,48 @@ const Chats = db.ChatModel;
 const router = Router();
 const sequelize = db.sequelize;
 
-router.post('/add_chat', async (req: Request, res: Response) => {
+router.post("/add_chat", async (req: Request, res: Response) => {
   const { chatId } = req.body;
   try {
     const exist = await Chats.findOne({ where: { chat_id_tg: chatId } });
     if (!exist) {
-      const chat = await Chats.create({ chat_id_tg: chatId, message_limit: 100, message_quantity: 0 });
+      const chat = await Chats.create({
+        chat_id_tg: chatId,
+        message_limit: 100,
+        message_quantity: 0,
+      });
 
-      if (chat.id) return res.status(200).send({ message: 'Genial, el chat se ha registrado satisfactoriamente, que empiece el juego, aqui va la primera waifu' });
-      else return res.status(500).send({ message: 'Ocurrio un Error al registrar el chat, intentelo mas tarde' });
-    } else return res.status(201).send({ message: 'Este chat ya esta registrado, no es necesario que se vuelva a correr el comando /start' });
+      if (chat.id)
+        return res
+          .status(200)
+          .send({
+            message:
+              "Genial, el chat se ha registrado satisfactoriamente, que empiece el juego, aqui va la primera waifu",
+          });
+      else
+        return res
+          .status(500)
+          .send({
+            message:
+              "Ocurrio un Error al registrar el chat, intentelo mas tarde",
+          });
+    } else
+      return res
+        .status(201)
+        .send({
+          message:
+            "Este chat ya esta registrado, no es necesario que se vuelva a correr el comando /start",
+        });
   } catch (error) {
-    return res.status(500).send('Ocurrio un error inesperado');
+    return res.status(500).send("Ocurrio un error inesperado");
   }
 });
 
-router.get('/top', async (req: Request, res: Response) => {
+router.get("/top", async (req: Request, res: Response) => {
   const { chatId } = req.query;
   try {
-    const users: any = await sequelize.query(`
+    const users: any = await sequelize.query(
+      `
       SELECT
         u.nickname,
         SUM(wl.quantity) quantity
@@ -40,7 +63,9 @@ router.get('/top', async (req: Request, res: Response) => {
       GROUP BY wl.user_id
       ORDER BY quantity DESC
       LIMIT 10
-    `, { type: QueryTypes.SELECT });
+    `,
+      { type: QueryTypes.SELECT }
+    );
 
     console.log(users);
     if (users.length == 0) return res.status(201).send();
@@ -51,39 +76,46 @@ router.get('/top', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/:chatId', async (req: Request, res: Response) => {
+router.get("/:chatId", async (req: Request, res: Response) => {
   const { chatId } = req.params;
   try {
     const chat = await Chats.findOne({ where: { chat_id_tg: chatId } });
     if (!chat) return res.status(201).send();
     const active = await Actives.findOne({ where: { chat_id: chat.id } });
     if (active != null) return res.status(201).send();
-    await sequelize.query(`
+    await sequelize.query(
+      `
       UPDATE chats
       SET message_quantity = message_quantity + 1
       WHERE id = ${chat.id}
-    `, { type: QueryTypes.UPDATE });
+    `,
+      { type: QueryTypes.UPDATE }
+    );
 
-    if (chat.message_quantity + 1 >= chat.message_limit) return res.status(200).send()
+    if (chat.message_quantity + 1 >= chat.message_limit)
+      return res.status(200).send();
     return res.status(201).send();
   } catch (error) {
-    console.error(error)
+    console.error(error);
     return res.status(500).send(error);
   }
 });
 
-router.put('/change_time', async (req: Request, res: Response) => {
+router.put("/change_time", async (req: Request, res: Response) => {
   const { chatId, quantity } = req.body;
   try {
-    await sequelize.query(`
+    await sequelize.query(
+      `
       UPDATE chats
       SET message_limit = ${quantity}
       WHERE chat_id_tg = '${chatId}'
-    `, { type: QueryTypes.UPDATE });
+    `,
+      { type: QueryTypes.UPDATE }
+    );
 
     return res.status(200).send();
   } catch (error) {
-    console.error(error)
+    console.error(error);
     return res.status(500).send();
   }
 });

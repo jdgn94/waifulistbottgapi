@@ -5,7 +5,7 @@ import multer, { FileFilterCallback } from "multer";
 import path from "path";
 import uuid from "uuid";
 
-import { logger, stream } from "./config/winston";
+import { logger, stream } from "../config/winston";
 
 // const baseURL = "/api";
 

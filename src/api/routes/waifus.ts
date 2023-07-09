@@ -4,16 +4,16 @@ import { Router, Request, Response } from "express";
 import { QueryTypes, Transaction } from "sequelize";
 import moment from "moment";
 
-import sequelize from "../db/models";
+import sequelize from "../../db/models";
 import { addExpUser } from "../utils/userInfo";
-import WaifuModel from "../db/models/waifu.model";
-import ActiveModel from "../db/models/active.model";
-import ChatModel from "../db/models/chat.model";
-import UserModel from "../db/models/user.model";
-import UserInfoModel from "../db/models/user_info.model";
-import BetModel from "../db/models/bet.model";
-import WaifuListModel from "../db/models/waifu_list.model";
-import WaifuFavoriteListModel from "../db/models/waifu_favorite_list.model";
+import WaifuModel from "../../db/models/waifu.model";
+import ActiveModel from "../../db/models/active.model";
+import ChatModel from "../../db/models/chat.model";
+import UserModel from "../../db/models/user.model";
+import UserInfoModel from "../../db/models/user_info.model";
+import BetModel from "../../db/models/bet.model";
+import WaifuListModel from "../../db/models/waifu_list.model";
+import WaifuFavoriteListModel from "../../db/models/waifu_favorite_list.model";
 
 const router = Router();
 const Waifu = WaifuModel;

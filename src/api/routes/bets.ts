@@ -1,7 +1,7 @@
-import { Router, Request, Response } from 'express';
-import { QueryTypes } from 'sequelize';
+import { Router, Request, Response } from "express";
+import { QueryTypes } from "sequelize";
 
-import db from '../db/models';
+import db from "../../db/models";
 
 const router = Router();
 const sequelize = db.sequelize;
@@ -9,7 +9,7 @@ const Chats = db.ChatModel;
 const Actives = db.ActiveModel;
 const Bets = db.BetModel;
 
-router.get('/', async (req: Request, res: Response) => {
+router.get("/", async (req: Request, res: Response) => {
   console.log("-------------------------------");
   console.log(db);
   console.log("-------------------------------");
@@ -17,8 +17,7 @@ router.get('/', async (req: Request, res: Response) => {
   console.log(chat_id);
 
   try {
-    const query =
-      `SELECT
+    const query = `SELECT
         u.nickname user_nickname,
         IF(f.nickname = '', f.name, CONCAT(f.name, ' (', f.nickname, ')')) franchise_name,
         b.quantity points
@@ -34,7 +33,12 @@ router.get('/', async (req: Request, res: Response) => {
 
     const bets: any = await sequelize.query(query, { type: QueryTypes.SELECT });
 
-    const message = await Promise.all(bets.map((bet: any) => `@${bet.user_nickname} aposto por ${bet.franchise_name} un total de ${bet.points} punto(s).`));
+    const message = await Promise.all(
+      bets.map(
+        (bet: any) =>
+          `@${bet.user_nickname} aposto por ${bet.franchise_name} un total de ${bet.points} punto(s).`
+      )
+    );
 
     return res.status(200).json({ message });
   } catch (error) {
@@ -43,14 +47,13 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/create', async (req: Request, res: Response) => {
+router.post("/create", async (req: Request, res: Response) => {
   const { chatId, userId, franchise, quantity } = req.body;
 
   const t = await sequelize.transaction();
   const typeSelect = { type: QueryTypes.SELECT };
   try {
-    let query =
-      `SELECT
+    let query = `SELECT
         ui.*
       FROM
         user_infos ui
@@ -65,10 +68,12 @@ router.post('/create', async (req: Request, res: Response) => {
     const profile: any = profiles[0];
     // console.log(profile);
 
-    if (profile.points < quantity) throw new Error('No hay los pustos necesarios para realizar esta apuesta');
+    if (profile.points < quantity)
+      throw new Error(
+        "No hay los pustos necesarios para realizar esta apuesta"
+      );
 
-    query =
-      `SELECT
+    query = `SELECT
         f.id,
         IF(f.nickname = '', f.name, CONCAT(f.name, ' (', f.nickname, ')')) name
       FROM
@@ -76,15 +81,17 @@ router.post('/create', async (req: Request, res: Response) => {
         INNER JOIN waifus w ON f.id = w.franchise_id
       GROUP BY f.id
       ORDER BY f.name
-      LIMIT 1 OFFSET ${franchise - 1}`
+      LIMIT 1 OFFSET ${franchise - 1}`;
 
     const franchises = await sequelize.query(query, typeSelect);
     const franchiseData: any = franchises[0];
 
-    if (!franchiseData) throw new Error('No se encontro la franquicia especificada a la cual quieres apostar');
+    if (!franchiseData)
+      throw new Error(
+        "No se encontro la franquicia especificada a la cual quieres apostar"
+      );
 
-    query =
-      `SELECT
+    query = `SELECT
           *
         FROM
           actives
@@ -95,14 +102,14 @@ router.post('/create', async (req: Request, res: Response) => {
     const active: any = actives[0];
 
     const activeBet = !active;
-    console.log('activar apuesta?', activeBet);
+    console.log("activar apuesta?", activeBet);
 
     await Bets.create(
       {
         user_info_id: profile.id,
         franchise_id: franchiseData.id,
         active: activeBet,
-        quantity
+        quantity,
       },
       { transaction: t }
     );
@@ -117,12 +124,20 @@ router.post('/create', async (req: Request, res: Response) => {
       WHERE id = ${profile.id}`,
       {
         type: QueryTypes.UPDATE,
-        transaction: t
+        transaction: t,
       }
     );
 
     await t.commit();
-    return res.status(200).json({ message: `Has apostado por la franquicia ${franchiseData.name} un total de ${quantity} punto(s), si ganas obtendras ${quantity * 10} puntos.` });
+    return res
+      .status(200)
+      .json({
+        message: `Has apostado por la franquicia ${
+          franchiseData.name
+        } un total de ${quantity} punto(s), si ganas obtendras ${
+          quantity * 10
+        } puntos.`,
+      });
   } catch (error) {
     await t.rollback();
     console.error(error);
