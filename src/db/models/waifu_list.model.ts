@@ -50,12 +50,10 @@ const createModel = (sequelize: Sequelize) => {
       },
       userId: {
         type: DataTypes.INTEGER.UNSIGNED,
-        unique: true,
         references: { model: UserModel, key: "id" },
       },
       waifuRarityId: {
         type: DataTypes.INTEGER.UNSIGNED,
-        unique: true,
         references: { model: WaifuRarityModel, key: "id" },
       },
       quantity: {

@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-if (process.env.NODE_ENV !== "producction") dotenv.config();
+if (process.env.NODE_ENV !== "production") dotenv.config();
 
 import api from "./api/";
 import bot from "./bot/";
@@ -21,7 +21,8 @@ const main = async () => {
     bot.launch();
     logger.info(`bot launched`);
 
-    setInterval(verifyActives, 10000);
+    verifyActives();
+    setInterval(verifyActives, 60000);
   } catch (err) {
     console.error(err);
     logger.error(err);

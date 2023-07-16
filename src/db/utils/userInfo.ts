@@ -1,7 +1,6 @@
-import { Model, Transaction } from "sequelize";
-import db from "../../db/models";
+import { Transaction } from "sequelize";
 
-const UserInfo = db.UserInfoModel;
+import { UserInfoModel } from "../../db/models/user_info.model";
 
 interface expType {
   type: string;
@@ -13,24 +12,26 @@ const addExpUser = async (
   expType: expType,
   t: Transaction
 ) => {
-  let userInfo = await UserInfo.findOne({ where: { id: userInfoId } });
-  // INFO: tipo agreando una waifu a la lista
+  let userInfo = await UserInfoModel.findOne({ where: { id: userInfoId } });
+  // INFO: tipo agregando una waifu a la lista
   if (expType.type == "newWaifu" && userInfo) {
     const addExp = expType.imgFavorite
-      ? await numberRandom(20, 15)
-      : await numberRandom(15, 10);
-    const newExp = (userInfo.exp + addExp) % userInfo.limit_exp;
+      ? numberRandom(20, 15)
+      : numberRandom(10, 5);
+    const newExp = (userInfo.exp + addExp) % userInfo.limitExp;
     const newLevel =
       newExp < userInfo.exp ? userInfo.level + 1 : userInfo.level;
     const newLimitExp = Math.trunc(newLevel / 5) * 25 + 100;
     const newPoints = userInfo.points + 1;
+    const newFavoritePages = Math.trunc(newLevel / 5);
 
     await userInfo.update(
       {
         exp: newExp,
         level: newLevel,
-        limit_exp: newLimitExp,
+        limitExp: newLimitExp,
         points: newPoints,
+        favoritePages: newFavoritePages,
       },
       { transaction: t }
     );
@@ -59,8 +60,8 @@ const messageExp = async (
   return message;
 };
 
-const numberRandom = async (max: number, min: number) => {
-  return await Math.round(Math.random() * (min - max) + max);
+const numberRandom = (max: number, min: number) => {
+  return Math.round(Math.random() * (min - max) + max);
 };
 
 export { addExpUser, numberRandom };

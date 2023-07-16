@@ -26,7 +26,7 @@ const start = async (ctx: Context) => {
 };
 
 const span = async (ctx: Context) => {
-  await sendWaifu(ctx);
+  await sendWaifu(ctx, null);
 };
 
 const protect = async (ctx: Context) => {

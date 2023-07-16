@@ -33,7 +33,7 @@ const fileFilter = async (
   }
 };
 
-// middelwares
+// middleware
 app.use(morgan("dev"));
 app.use(morgan("combined", { stream }));
 app.use(cors());

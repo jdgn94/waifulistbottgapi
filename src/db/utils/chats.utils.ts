@@ -34,14 +34,14 @@ const findOrCreate = async (
   }
 };
 
-const findByIdTg = async (chatIdTg: number) => {
-  return await ChatModel.findOne({ where: { chatIdTg } });
+const findByIdTg = async (chatIdTg: number, t: Transaction | null) => {
+  return await ChatModel.findOne({ where: { chatIdTg }, transaction: t });
 };
 
 const addCounter = async (chatIdTg: number, t: Transaction | null) => {
   const trans = t ?? (await db.transaction());
   try {
-    const chat = await findByIdTg(chatIdTg);
+    const chat = await findByIdTg(chatIdTg, t);
 
     if (!chat) throw "No chat found";
 

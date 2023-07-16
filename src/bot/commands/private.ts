@@ -26,7 +26,7 @@ const _createChantAndUser = async (ctx: Context) => {
     );
     const user = await usersUtils.findOrCreate(
       ctx.from!.id,
-      ctx.from!.username!,
+      ctx.from!.username ?? ctx.from!.first_name,
       t
     );
     await userChatsUtils.findOrCreate(user.id, chat[0].id, t);

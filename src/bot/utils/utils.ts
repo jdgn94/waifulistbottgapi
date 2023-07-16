@@ -1,5 +1,5 @@
 import { Context } from "telegraf";
-// import Extra from 'telegraf/';
+
 import { InputMedia } from "telegraf/typings/core/types/typegram";
 import { MediaGroup } from "telegraf/typings/telegram-types";
 
@@ -10,13 +10,14 @@ import activesUtils from "../../db/utils/actives.utils";
 import i18n from "../../config/i18n";
 
 import bot from "../../bot/";
+import { Transaction } from "sequelize";
 
 const getLanguage = async (ctx: Context) => {
   try {
     const chatId = ctx.message?.chat.id;
 
     if (chatId) {
-      const chat = await chatsUtils.findByIdTg(chatId);
+      const chat = await chatsUtils.findByIdTg(chatId, null);
       return chat?.language ?? "en";
     }
     return;
@@ -29,6 +30,7 @@ const getLanguage = async (ctx: Context) => {
 const addMessageCount = async (ctx: Context) => {
   try {
     if (!chatIsGroup(ctx)) return;
+    if (await _waifuActiveInChat(ctx)) return;
     return await addCountToChat(ctx);
   } catch (error) {
     global.logger.error(error);
@@ -48,7 +50,7 @@ const addCountToChat = async (ctx: Context) => {
       logger.debug(
         "Tengo que enviar la waifu, debo preparar el nuevo algoritmo"
       );
-      await sendWaifu(ctx);
+      await sendWaifu(ctx, null);
     }
   } catch (error) {
     logger.error(`${error}: File utils; Function addCountToChat`);
@@ -59,21 +61,15 @@ const commandOnlyOnGroup = async (ctx: Context) => {
   return ctx.reply(i18n.__("commandOnlyOnGroup"));
 };
 
-const sendWaifu = async (ctx: Context) => {
+const sendWaifu = async (ctx: Context, t: Transaction | null) => {
   try {
-    const chat = await chatsUtils.findByIdTg(ctx.chat!.id);
+    const chat = await chatsUtils.findByIdTg(ctx.chat!.id, t);
     if (!chat) return;
     const imageType = _getWaifuType();
     const waifuImage = await waifusUtils.getRandomWaifuByType(imageType);
     if (!waifuImage) return;
 
-    await activesUtils.create(chat.id, waifuImage.WaifuRarity!.id);
-
-    logger.debug(
-      `Este es el id de la waifu que debo enviar: ${
-        waifuImage.WaifuRarity!.id
-      }, de rareza ${imageType}`
-    );
+    await activesUtils.create(chat.id, waifuImage.WaifuRarity!.id, t);
 
     const imageToSend: InputMedia[] = [
       {
@@ -99,15 +95,12 @@ const getRandom = (min: number, max: number) => {
 };
 
 const verifyActives = async () => {
-  logger.debug(
-    "aqui debo verificar varias cosas, una es que la waifu no esta caducada y las otras las pensare despues"
-  );
   const activesToDelete = await activesUtils.getPass();
   await _deleteActives(activesToDelete.map((active) => active.id));
 };
 
 const sendNewMessageOnChat = async (chatId: number, message: string) => {
-  await bot.telegram.sendMessage(chatId, message, {});
+  await bot.telegram.sendMessage(chatId, message, { parse_mode: "MarkdownV2" });
 };
 
 const _getWaifuType = () => {
@@ -120,26 +113,35 @@ const _getWaifuType = () => {
   return 1;
 };
 
+const _waifuActiveInChat = async (ctx: Context) => {
+  const active = await activesUtils.getWaifuByChatIdOrActiveId(ctx.chat!.id);
+  if (active) return true;
+  return false;
+};
+
 const _deleteActives = async (ids: number[]) => {
-  logger.debug(`estos son los ids que tengo que eliminar: ${ids}`);
-  const totalToDelete = ids.length;
+  try {
+    const totalToDelete = ids.length;
 
-  for (let i = 0; i < totalToDelete; i++) {
-    const activeToDelete = await activesUtils.getWaifuByChatIdOrActiveId(
-      ids[i]
-    );
+    for (let i = 0; i < totalToDelete; i++) {
+      const activeToDelete = await activesUtils.getWaifuByChatIdOrActiveId(
+        ids[i]
+      );
 
-    const waifuName = activeToDelete.WaifuRarity!.Waifu!.name;
-    const franchiseName = activeToDelete.WaifuRarity!.Waifu!.Franchise!.name;
+      if (!activeToDelete) return;
+      const waifuName = activeToDelete.WaifuRarity!.Waifu!.name;
+      const franchiseName = activeToDelete.WaifuRarity!.Waifu!.Franchise!.name;
 
-    console.log(waifuName);
-    console.log(franchiseName);
-    const message = i18n.__("waifuScape", {
-      waifuName,
-      franchiseName,
-    });
+      const message = i18n.__("waifuScape", {
+        waifuName,
+        franchiseName,
+      });
+      await activesUtils.destroy(ids[i], null);
 
-    await sendNewMessageOnChat(activeToDelete.Chat!.chatIdTg, message);
+      await sendNewMessageOnChat(activeToDelete.Chat!.chatIdTg, message);
+    }
+  } catch (error) {
+    logger.error(error);
   }
 };
 

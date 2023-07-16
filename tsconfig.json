@@ -102,6 +102,5 @@
     "types.d.ts",
     "multer.d.ts",
     "global.d.ts",
-    "./src/db/models/ActivesOutput.ts"
   ],
 }
